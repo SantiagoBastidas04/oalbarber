@@ -44,6 +44,11 @@ la fase 2, reutilizando la misma lógica de agenda.
 El detalle completo, con requisitos, reglas y criterios de aceptación, está en
 [`docs/srs/SRS-OalBarber.md`](docs/srs/SRS-OalBarber.md).
 
+**Estado del código:** el backend tiene la estructura y la configuración base (todavía sin
+controladores ni módulo `auth`), y el frontend ya cuenta con un **esqueleto navegable** de todas
+las rutas de la fase 1, sin lógica de negocio. Ver [§7](#7-estructura-del-repositorio) y
+[§11](#11-cómo-ejecutarlo-con-docker).
+
 ### Fase 2 (futuro, no implementada)
 
 - Módulo de WhatsApp con un bot para reservar y para que el administrador consulte la agenda del
@@ -224,9 +229,19 @@ oalbarber/
 │   ├── decisiones/
 │   └── srs/
 └── frontend/
+    ├── Dockerfile              build multi-stage: Node + nginx
+    ├── nginx.conf              SPA, proxy /api, cachés y cabeceras
+    ├── .dockerignore
+    ├── .env.example
+    ├── index.html
+    ├── package.json
+    ├── package-lock.json
+    ├── vite.config.ts
     ├── public/
-    │   └── servicios/
+    │   ├── favicon.svg
+    │   └── servicios/          fotos estáticas del catálogo
     └── src/
+        ├── main.tsx
         ├── components/
         │   └── comunes/
         ├── config/
@@ -249,9 +264,8 @@ oalbarber/
         └── utils/
 ```
 
-En `frontend/` viven además `index.html`, `package.json`, `vite.config.ts`, `tsconfig*.json`,
-`Dockerfile`, `nginx.conf`, `.dockerignore` y `.env.example`, y cada carpeta de `src/` tiene su
-propio `README.md`.
+En `frontend/` viven además los `tsconfig*.json`, `.oxlintrc.json` y `.gitignore`, y cada carpeta
+de `src/` tiene su propio `README.md` con lo que debe ir y lo que no.
 
 En la raíz viven además `docker-compose.yml`, `.env.example`, `.gitignore` y este `README.md`.
 Cada carpeta de código y documentación tiene su propio `README.md` con lo que debe ir y lo que no.
@@ -355,23 +369,143 @@ La rama de trabajo es `develop`; `main` es la rama estable.
 
 ## 11. Cómo ejecutarlo con Docker
 
-### Requisitos
+### Guía rápida
 
-- Docker.
-- Docker Compose (incluido en Docker Desktop).
-
-### Puesta en marcha
+Estos comandos, desde cero, dejan la aplicación arriba:
 
 ```bash
-# 1. Crear el archivo de entorno a partir del ejemplo
+git clone https://github.com/SantiagoBastidas04/oalbarber.git
+cd oalbarber
+git checkout develop
+cp .env.example .env            # PowerShell: Copy-Item .env.example .env
+docker compose up -d --build    # la primera vez tarda varios minutos
+```
+
+Luego abre **<http://localhost:3000>**. Para detener todo: `docker compose down`.
+
+> Si ya tenías el proyecto clonado: `git checkout develop`, `git pull`, y después
+> `docker compose up -d --build`. El `.env` solo se crea la primera vez.
+
+### Requisitos
+
+- Docker Desktop (incluye Docker Compose).
+- Node.js 24 LTS y npm, solo si vas a trabajar en el frontend con `npm run dev`.
+
+### Qué levanta Docker Compose
+
+| Servicio | Imagen | Puerto en tu equipo | Para qué sirve |
+|---|---|---|---|
+| `postgres` | `postgres:17-alpine` | `5432` (opcional) | Base de datos. |
+| `api` | se construye desde `backend/` | `8080` | API REST de Spring Boot. |
+| `pgadmin` | `dpage/pgadmin4` | `5050` | Administrar la base desde el navegador. |
+| `frontend` | se construye desde `frontend/` (Node + nginx) | `3000` | SPA de React servida por nginx, que además hace proxy de `/api` a `api`. |
+
+Todo queda en la red interna `oalbarber_net`. El navegador **nunca** habla directo con la API: pide
+`/api/...` al mismo origen (3000) y nginx lo reenvía al servicio `api`. Por eso no hay CORS.
+
+### El contenedor del frontend
+
+El servicio `frontend` se construye con `frontend/Dockerfile` en dos etapas:
+
+1. **Compilación** (`node:24-alpine`): copia `package*.json`, ejecuta `npm ci` y luego
+   `npm run build`, que verifica los tipos y genera `dist/`. La URL de la API entra como *build
+   arg* `VITE_API_BASE_URL` (por defecto `/api`) y queda incrustada en el JavaScript.
+2. **Servicio** (`nginxinc/nginx-unprivileged:1.29-alpine`): copia `dist/` a
+   `/usr/share/nginx/html` y `nginx.conf` a `/etc/nginx/conf.d/default.conf`. Escucha en **8080** y
+   corre **sin root**; el host lo publica en `${FRONTEND_PORT:-3000}`.
+
+`frontend/nginx.conf` hace cuatro cosas:
+
+- **SPA**: `try_files $uri /index.html`, así recargar en `/mis-citas` o `/panel/agenda` funciona.
+- **Proxy de la API**: `location /api/` reenvía a `http://api:8080` conservando el prefijo. Usa una
+  variable y el `resolver` interno de Docker, por lo que nginx arranca aunque la API aún no exista
+  (responde `502` hasta que esté lista).
+- **Estáticos**: `/assets/` con caché de un año e `immutable`, `index.html` con `no-cache`, y
+  `/servicios/` con las fotos del catálogo (404 si el archivo no existe).
+- **Salud y seguridad**: `200` en `/healthz` (lo usa el `HEALTHCHECK`), gzip y cabeceras
+  `X-Content-Type-Options`, `X-Frame-Options` y `Referrer-Policy`.
+
+Por eso `docker compose ps` muestra `frontend` como `healthy`, y **no hace falta** publicar la API
+ni configurar CORS.
+
+### Paso a paso (primera vez)
+
+```bash
+# 1. Clonar y entrar a la rama de trabajo
+git clone https://github.com/SantiagoBastidas04/oalbarber.git
+cd oalbarber
+git checkout develop
+
+# 2. Crear tu archivo de entorno a partir del ejemplo
 cp .env.example .env          # Linux/macOS
 Copy-Item .env.example .env   # PowerShell
 
-# 2. Ajustar las contraseñas y el correo de pgAdmin en .env
+# 3. Editar .env: cambia POSTGRES_PASSWORD y PGADMIN_DEFAULT_PASSWORD
+#    (opcional) FRONTEND_PORT=3000
 
-# 3. Levantar todo
+# 4. Construir y levantar todo
 docker compose up --build
 ```
+
+> **Ojo con `POSTGRES_PASSWORD`:** se aplica solo al crear la base por primera vez. Si la cambias
+> después, la API falla con `28P01` hasta que actualices la clave en la base
+> (ver [Solución de problemas](#13-solución-de-problemas)).
+
+La primera vez tarda varios minutos: descarga imágenes, compila el backend y compila la SPA.
+
+### Paso a paso (día a día)
+
+```bash
+docker compose up -d          # levantar en segundo plano
+docker compose ps             # ver estado y salud
+docker compose down           # detener todo
+```
+
+Si cambiaste código del **backend** o del **frontend**, hay que reconstruir esa imagen:
+
+```bash
+docker compose build api frontend
+docker compose up -d
+```
+
+### Comprobar que quedó bien
+
+```bash
+docker compose ps
+```
+
+`postgres`, `api` y `frontend` deben aparecer como `healthy`. Luego abre
+`http://localhost:3000`: debe cargar la página de inicio de OalBarber y navegar a `/servicios`,
+`/reservar`, `/mis-citas`, etc. sin errores.
+
+Un `401` al pedir `http://localhost:3000/api/servicios` es **correcto** por ahora: la API exige
+autenticación mientras no exista el módulo `auth`. Un `502` significaría que nginx no encuentra la
+API.
+
+### Desarrollar el frontend con recarga en caliente
+
+Docker sirve la versión compilada; para programar usa Vite con la API en Docker:
+
+```bash
+docker compose up -d postgres api     # la API en Docker
+
+cd frontend
+npm install                           # solo la primera vez
+npm run dev                           # http://localhost:5173
+```
+
+Vite reenvía `/api` a `http://localhost:8080`. Si la API usa otro puerto:
+
+```powershell
+$env:VITE_DEV_API_TARGET="http://localhost:8081"; npm run dev
+```
+
+```bash
+VITE_DEV_API_TARGET=http://localhost:8081 npm run dev
+```
+
+`frontend/.env` es **opcional**: solo si necesitas cambiar `VITE_API_BASE_URL`. La plantilla está en
+`frontend/.env.example`.
 
 ### URLs
 
@@ -382,18 +516,31 @@ docker compose up --build
 | Salud de la API | `http://localhost:8080/actuator/health` |
 | pgAdmin | `http://localhost:5050` |
 
-El puerto del frontend se cambia con `FRONTEND_PORT` en `.env` (por ejemplo `FRONTEND_PORT=3001`);
-el contenedor siempre escucha en 8080. Para reconstruir solo la SPA después de un cambio:
-`docker compose build frontend`.
+El puerto publicado del frontend se cambia con `FRONTEND_PORT` en `.env` (por ejemplo
+`FRONTEND_PORT=3001`); el contenedor siempre escucha en 8080.
 
-El servicio `api` espera a que PostgreSQL esté saludable (`condition: service_healthy`) y su
-`HEALTHCHECK` consulta `/actuator/health`, que queda público por `SecurityConfig`. El resto de
-rutas exige autenticación.
+Cómo se encadenan los servicios:
 
-El servicio `frontend` es nginx sin privilegios: sirve `index.html` para cualquier ruta de la SPA
-y hace proxy de `/api/` al servicio `api` por la red interna, así que el navegador no necesita
-CORS. Depende de `api` con `condition: service_started`, de modo que arranca aunque la API tarde;
-mientras no esté lista, `/api/**` responde `502`.
+- `api` espera a PostgreSQL (`condition: service_healthy`) y su `HEALTHCHECK` consulta
+  `/actuator/health`, que es público en `SecurityConfig`.
+- `frontend` espera a `api` con `condition: service_started`: nginx arranca aunque la API tarde y
+  responde `502` en `/api/**` hasta que el backend esté listo. El resto del comportamiento de nginx
+  está en [El contenedor del frontend](#el-contenedor-del-frontend).
+
+### Variables de entorno
+
+| Variable | Dónde | Uso |
+|---|---|---|
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | `.env` | Base de datos; la API los recibe como `DB_*`. |
+| `PGADMIN_DEFAULT_EMAIL`, `PGADMIN_DEFAULT_PASSWORD` | `.env` | Acceso a pgAdmin. |
+| `FRONTEND_PORT` | `.env` | Puerto del host para la SPA (`3000` por defecto). |
+| `VITE_API_BASE_URL` | `.env` del frontend / build arg | Base de la API que usa el navegador (`/api`). |
+| `VITE_DEV_API_TARGET` | entorno del proceso | Destino del proxy de Vite en desarrollo. |
+
+`.env` no se versiona (está en `.gitignore`); `.env.example` sí, y no contiene secretos. Todos los
+servicios leen el mismo `POSTGRES_PASSWORD`, que **solo se aplica al crear la base por primera
+vez**. Si lo cambias con el volumen ya creado, la API falla con `28P01` (ver
+[Solución de problemas](#13-solución-de-problemas)).
 
 ### Registrar el servidor en pgAdmin
 
@@ -440,6 +587,20 @@ npm run test
 npm run build
 ```
 
+### Subir un cambio (resumen)
+
+```bash
+git status                      # ver qué cambió
+git add -A                      # preparar todo (respeta .gitignore)
+git status --short              # revisar la lista antes de confirmar
+git commit -m "feat: descripcion corta del cambio"
+git push -u origin <tu-rama>
+```
+
+Después se abre el Pull Request hacia `develop` en GitHub. `.env`, `node_modules/`, `dist/` y
+`target/` no se suben porque están en `.gitignore`; `.env.example` sí se versiona y no contiene
+secretos.
+
 ## 13. Solución de problemas
 
 ### El puerto 8080 (o 5050) está ocupado
@@ -465,17 +626,44 @@ docker compose logs api
 Si PostgreSQL reinicia, suele ser por credenciales inválidas en `.env` o por un volumen viejo
 (ver el punto siguiente). También puede tardar la primera vez mientras descarga la imagen.
 
-### Cambié las credenciales en `.env` y la API ya no conecta
+### Cambié las credenciales en `.env` y la API no conecta (`28P01`)
 
-PostgreSQL solo aplica `POSTGRES_USER` y `POSTGRES_PASSWORD` al crear la base por primera vez. Si
-el volumen `postgres_data` ya existe con las credenciales anteriores, hay que recrearlo:
+Síntoma en los logs de `api`:
+
+```text
+FATAL: password authentication failed for user "oalbarber"
+SQL State : 28P01
+```
+
+PostgreSQL solo aplica `POSTGRES_USER` y `POSTGRES_PASSWORD` la **primera vez** que crea la base.
+El volumen `oalbarber_postgres_data` conserva la contraseña anterior, aunque el `.env` ya diga otra.
+Hay dos salidas:
+
+**A. Conservar los datos** (cambiar la clave dentro de la base y reiniciar la API):
+
+```bash
+docker compose exec -T postgres psql -U oalbarber -d postgres
+# dentro de psql:
+ALTER USER oalbarber WITH PASSWORD 'la_clave_del_env';
+\q
+docker compose restart api
+```
+
+En PowerShell, sin entrar a la consola:
+
+```powershell
+"ALTER USER oalbarber WITH PASSWORD 'la_clave_del_env';" | docker compose exec -T postgres psql -U oalbarber -d postgres
+docker compose restart api
+```
+
+**B. Empezar de cero** (borra la base y los datos de pgAdmin):
 
 ```bash
 docker compose down -v
 docker compose up --build
 ```
 
-`down -v` borra la base de datos y los datos de pgAdmin; úsalo solo en desarrollo.
+`down -v` borra los datos; úsalo solo en desarrollo.
 
 ### La API responde 401 en todo
 
@@ -484,6 +672,10 @@ público `/actuator/health/**` y exige autenticación en el resto. El TODO de es
 dónde se reemplaza al implementar JWT. Por eso el esqueleto del frontend no llama a la API al
 cargar, y una petición manual a `http://localhost:3000/api/servicios` devuelve `401` (no es un
 fallo de nginx ni del proxy).
+
+Al abrir esa URL en el navegador puede aparecer un diálogo pidiendo usuario y contraseña: es la
+autenticación básica de Spring Security. No hay credenciales válidas todavía; basta con cancelarlo.
+Ese diálogo desaparece cuando exista el módulo `auth` con JWT.
 
 ### El puerto 3000 está ocupado
 
