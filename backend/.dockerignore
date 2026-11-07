@@ -1,0 +1,38 @@
+# Artefactos de compilación
+target/
+build/
+out/
+
+# Control de versiones y metadatos del repositorio
+.git/
+.gitignore
+.gitattributes
+
+# Entornos y secretos (nunca dentro de la imagen)
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.settings/
+.classpath
+.project
+
+# Sistema operativo y logs
+.DS_Store
+Thumbs.db
+*.log
+
+# Documentación y archivos auxiliares que no necesita el build
+docs/
+HELP.md
+README.md
+
+# El propio Dockerfile no forma parte del contexto
+Dockerfile
+.dockerignore
