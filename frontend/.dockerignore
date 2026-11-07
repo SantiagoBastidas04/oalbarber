@@ -1,0 +1,19 @@
+# Dependencias y artefactos de build
+node_modules
+dist
+.vite
+coverage
+
+# Entornos y secretos: nunca dentro de la imagen
+.env
+.env.*
+!.env.example
+
+# Logs y metadatos
+*.log
+.git
+.gitignore
+
+# El propio Dockerfile no forma parte del contexto
+Dockerfile
+.dockerignore
