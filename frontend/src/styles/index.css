@@ -1,50 +1,139 @@
 @import "tailwindcss";
 
 /*
- * Tema provisional de OalBarber.
+ * Tema de OalBarber.
  *
- * El cliente todavía no tiene logo ni colores. Toda la paleta vive aquí, así
- * que el branding se cambia en este archivo sin tocar los componentes.
+ * Paleta monocroma estricta (negro, blanco y grises neutros) y tres familias
+ * tipográficas expuestas como variables para reutilizarlas en todo el
+ * proyecto:
+ *
+ *   font-display  → títulos y cifras grandes (serif editorial)
+ *   font-sans     → cuerpo, interfaz y formularios (sans legible en móvil)
+ *   font-mono     → etiquetas, códigos y microtexto (monoespaciada)
+ *
+ * El branding se cambia en este archivo sin tocar los componentes.
  */
+/*
+ * Escritorio con poca altura (portátiles de 768 px o menos).
+ * Permite apretar un poco el registro para que siga entrando completo.
+ */
+@custom-variant corto (@media (min-width: 64rem) and (max-height: 48.75rem));
+
 @theme {
-  /* Marca (provisional, neutra) */
-  --color-marca-50: #f4f4f5;
-  --color-marca-100: #e4e4e7;
-  --color-marca-200: #d4d4d8;
-  --color-marca-300: #a1a1aa;
-  --color-marca-400: #71717a;
-  --color-marca-500: #52525b;
-  --color-marca-600: #3f3f46;
-  --color-marca-700: #27272a;
-  --color-marca-800: #18181b;
-  --color-marca-900: #09090b;
+  /* Marca (escala neutra pura, del blanco al negro) */
+  --color-marca-50: #fafafa;
+  --color-marca-100: #f5f5f5;
+  --color-marca-200: #e5e5e5;
+  --color-marca-300: #d4d4d4;
+  --color-marca-400: #a3a3a3;
+  --color-marca-500: #737373;
+  --color-marca-600: #525252;
+  --color-marca-700: #404040;
+  --color-marca-800: #262626;
+  --color-marca-900: #0a0a0a;
+  --color-marca-950: #000000;
 
   /* Superficies, texto y bordes */
   --color-fondo: #fafafa;
   --color-superficie: #ffffff;
-  --color-texto: #18181b;
-  --color-texto-suave: #52525b;
-  --color-borde: #e4e4e7;
+  --color-texto: #0a0a0a;
+  --color-texto-suave: #525252;
+  --color-borde: #e5e5e5;
 
-  /* Tipografía del sistema: sin fuentes externas ni peticiones adicionales */
+  /* Color funcional, solo para mensajes de error */
+  --color-error: #b91c1c;
+
+  /* Tipografía */
+  --font-display: "Playfair Display", "Times New Roman", Georgia, serif;
+  --font-marca: "Bebas Neue", Impact, Haettenschweiler, "Arial Narrow", sans-serif;
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    sans-serif;
+    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-mono:
+    "JetBrains Mono", ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, monospace;
 }
 
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    /* Deja aire bajo el encabezado fijo al saltar a un ancla. */
+    scroll-padding-top: 5rem;
+    /* Sin retardo de 300 ms ni zoom por doble toque en móvil. */
+    touch-action: manipulation;
   }
 
   body {
     background-color: var(--color-fondo);
     color: var(--color-texto);
     font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  /* Los campos mantienen 16 px para que iOS no haga zoom al enfocar. */
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+  }
+
+  ::selection {
+    background-color: var(--color-marca-900);
+    color: var(--color-superficie);
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-marca-600);
+    outline: 2px solid var(--color-marca-900);
     outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Entrada suave para mensajes de éxito y error. */
+  @keyframes aparecer {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animar-entrada {
+    animation: aparecer 0.35s ease-out both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animar-entrada {
+      animation: none;
+    }
   }
 }

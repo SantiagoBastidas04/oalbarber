@@ -6,16 +6,17 @@ trabajan desde el panel.
 
 ## Estado actual
 
-**Esqueleto navegable, sin lógica de negocio.** Todas las rutas de la fase 1 existen y se pueden
-recorrer, pero las páginas son marcadores con su título, los requisitos del SRS que
-implementarán y el texto "Pendiente de implementar".
+**Esqueleto navegable con el registro de clientes conectado a la API.** Todas las rutas de la fase 1
+existen y se pueden recorrer; el formulario de `/registro` ya crea usuarios reales con
+`POST /api/usuarios/registro`. Las demás páginas siguen siendo marcadores con su título, los
+requisitos del SRS que implementarán y el texto "Pendiente de implementar".
 
-- No hay llamadas a la API al cargar la aplicación.
+- La única llamada a la API al cargar la aplicación es el registro de clientes.
 - No se muestran servicios, precios ni horarios inventados.
-- La autenticación está preparada (cliente HTTP, token en memoria, contexto y guardas de rol),
-  pero los formularios de registro e ingreso todavía no envían datos.
-- El backend actual responde `401` en todo `/api/**` salvo `/actuator/health`; es lo esperado
-  hasta que exista el módulo `auth`.
+- La autenticación está preparada (cliente HTTP, token en memoria, contexto y guardas de rol);
+  el inicio de sesión espera el módulo `auth` del backend.
+- El resto de `/api/**` exige autenticación; el registro es el único endpoint público además de
+  `/actuator/health` y Swagger.
 
 ## Alcance de la fase 1
 
@@ -160,7 +161,7 @@ se publica en `docs/api/openapi.yaml`; hasta entonces puede cambiar.
 
 | Método y ruta | Acceso | RF |
 |---|---|---|
-| `POST /api/auth/registro` | Público | RF-01 |
+| `POST /api/usuarios/registro` | Público | RF-01 |
 | `POST /api/auth/login` | Público | RF-02 |
 | `POST /api/auth/refresh` | Cookie de refresh | RF-03 |
 | `POST /api/auth/logout` | Autenticado | RF-04 |
@@ -183,6 +184,10 @@ se publica en `docs/api/openapi.yaml`; hasta entonces puede cambiar.
 
 Convenciones: prefijo `/api`, recursos en plural y en español, fechas ISO-8601 con offset de
 Bogotá (`2026-11-10T10:00:00-05:00`) y errores `ProblemDetail` (RFC 7807).
+
+El registro ya usa el contrato real del backend: `POST /api/usuarios/registro` recibe
+`{ nombre, celular, contrasena }` y devuelve `UsuarioResponse` sin sesión. Las rutas `/api/auth/*`
+siguen siendo una propuesta hasta que exista el módulo `auth`.
 
 ## Imágenes del catálogo: archivos estáticos
 
