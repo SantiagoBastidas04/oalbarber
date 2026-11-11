@@ -1,8 +1,10 @@
 package com.oalbarber.api.modules.usuario.controller;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,6 +34,25 @@ import lombok.RequiredArgsConstructor;
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
+
+    /**
+     * Lista de clientes para el panel de administración. Solo el rol
+     * ADMINISTRADOR puede verla: con un pase de CLIENTE responde 403.
+     */
+    @Operation(summary = "Listar los clientes",
+            description = "Devuelve las cuentas con rol CLIENTE, ordenadas por nombre. "
+                    + "Exclusiva para administradores.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Lista de clientes"),
+            @ApiResponse(responseCode = "403", description = "El pase no es de administrador",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @GetMapping("/clientes")
+    public List<UsuarioResponse> listarClientes() {
+        return usuarioService.listarClientes();
+    }
 
     @Operation(summary = "Obtener un usuario por id")
     @ApiResponses({

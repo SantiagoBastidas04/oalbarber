@@ -7,6 +7,7 @@ import java.util.Map;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -75,6 +76,17 @@ public class GlobalExceptionHandler {
         log.warn("Conflicto de integridad: {}", ex.getMostSpecificCause().getMessage());
         return problema(HttpStatus.CONFLICT, "Conflicto",
                 "Ya existe un registro con esos datos.", "CONFLICTO", request);
+    }
+
+    /**
+     * El pase es válido pero el rol no alcanza (por ejemplo, un CLIENTE
+     * pidiendo la lista de clientes). Debe ir ANTES del catch-all: si no,
+     * el handler de Exception la captura y respondería 500.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail accesoDenegado(AccessDeniedException ex, HttpServletRequest request) {
+        return problema(HttpStatus.FORBIDDEN, "Acceso denegado",
+                "No tienes permisos para realizar esta acción.", "ACCESO_DENEGADO", request);
     }
 
     @ExceptionHandler(Exception.class)

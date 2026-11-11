@@ -1,5 +1,6 @@
 package com.oalbarber.api.modules.usuario.service;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -56,5 +57,15 @@ public class UsuarioService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("No existe el usuario indicado."));
         return usuarioMapper.toResponse(usuario);
     }
-    
+
+    /**
+     * Lista los clientes ordenados por nombre. Para el panel de administración:
+     * el rol del que consulta se exige en el controlador con @PreAuthorize.
+     */
+    @Transactional(readOnly = true)
+    public List<UsuarioResponse> listarClientes() {
+        return usuarioRepository.findByRolOrderByNombreAsc(RolUsuario.CLIENTE).stream()
+                .map(usuarioMapper::toResponse)
+                .toList();
+    }
 }
