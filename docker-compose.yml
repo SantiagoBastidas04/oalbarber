@@ -35,6 +35,12 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75}
       TZ: America/Bogota
+      JWT_SECRETO: ${JWT_SECRETO}
+      JWT_MINUTOS_ACCESO: ${JWT_MINUTOS_ACCESO:-15}
+      REFRESH_DIAS: ${REFRESH_DIAS:-7}
+      ADMIN_CELULAR: ${ADMIN_CELULAR}
+      ADMIN_NOMBRE: ${ADMIN_NOMBRE:-OalBarber Admin}
+      ADMIN_CONTRASENA: ${ADMIN_CONTRASENA}
     ports:
       - "8080:8080"
     depends_on:

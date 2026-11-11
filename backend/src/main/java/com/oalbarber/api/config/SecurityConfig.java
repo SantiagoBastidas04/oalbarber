@@ -3,18 +3,22 @@ package com.oalbarber.api.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 
+import com.oalbarber.api.modules.auth.service.TokenServicio;
+
 /**
- * Configuración mínima de seguridad.
- *
- * <p>Deja público únicamente el health check de Actuator para que el {@code HEALTHCHECK} del
- * contenedor pueda consultarlo; cualquier otra ruta exige autenticación. Spring Security bloquea
- * todo por defecto, así que sin esta clase el contenedor nunca quedaría saludable.</p>
+ * Seguridad con JWT: el servidor no guarda sesiones (STATELESS); cada petición
+ * trae su pase Bearer, que se valida con la llave del .env. Solo el health
+ * check, la documentación, el registro y los tres endpoints de entrada a la
+ * sesión son públicos; todo lo demás exige un pase válido.
  */
 @Configuration
 public class SecurityConfig {
@@ -24,17 +28,30 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // TODO: reemplazar al implementar el módulo auth (JWT)
+    /** El mismo decodificador que usa {@link TokenServicio} para firmar. */
+    @Bean
+    JwtDecoder jwtDecoder(TokenServicio tokenServicio) {
+        return tokenServicio.decodificador();
+    }
+
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
+                // Sin sesión de servidor: no hay cookie JSESSIONID ni redirecciones a formulario.
+                .sessionManagement(sesion -> sesion.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(autorizacion -> autorizacion
                         .requestMatchers("/actuator/health/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/usuarios/registro").permitAll()
+                        // Entradas a la sesión: públicas porque aún no hay con qué autenticarse.
+                        .requestMatchers(HttpMethod.POST, "/api/auth/registro", "/api/auth/login",
+                                "/api/auth/refresh", "/api/auth/logout").permitAll()
                         .anyRequest().authenticated())
-                .httpBasic(org.springframework.security.config.Customizer.withDefaults());
+                // Cada petición con Authorization: Bearer ... se valida contra JwtDecoder.
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
+                // Sin httpBasic ni formularios: solo JWT.
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable);
         return http.build();
     }
 }

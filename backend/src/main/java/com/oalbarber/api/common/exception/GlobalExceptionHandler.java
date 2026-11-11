@@ -22,6 +22,24 @@ import lombok.extern.slf4j.Slf4j;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(CredencialesInvalidasException.class)
+    public ProblemDetail credenciales(CredencialesInvalidasException ex, HttpServletRequest request) {
+        return problema(HttpStatus.UNAUTHORIZED, "No pudimos iniciar sesión", ex.getMessage(),
+                "CREDENCIALES_INVALIDAS", request);
+    }
+
+    @ExceptionHandler(TokenInvalidoException.class)
+    public ProblemDetail tokenInvalido(TokenInvalidoException ex, HttpServletRequest request) {
+        return problema(HttpStatus.UNAUTHORIZED, "Pase de acceso no válido", ex.getMessage(),
+                "TOKEN_INVALIDO", request);
+    }
+
+    @ExceptionHandler(SesionInvalidaException.class)
+    public ProblemDetail sesionInvalida(SesionInvalidaException ex, HttpServletRequest request) {
+        return problema(HttpStatus.UNAUTHORIZED, "Sesión no válida", ex.getMessage(),
+                ex.getCodigo(), request);
+    }
+
     @ExceptionHandler(RecursoNoEncontradoException.class)
     public ProblemDetail noEncontrado(RecursoNoEncontradoException ex, HttpServletRequest request) {
         return problema(HttpStatus.NOT_FOUND, "Recurso no encontrado", ex.getMessage(),

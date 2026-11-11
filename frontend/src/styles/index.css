@@ -19,6 +19,12 @@
  */
 @custom-variant corto (@media (min-width: 64rem) and (max-height: 48.75rem));
 
+/*
+ * Cualquier pantalla con poca altura (celulares de 640 px o menos).
+ * Comprime el registro para que el botón principal quede a la vista.
+ */
+@custom-variant bajito (@media (max-height: 40rem));
+
 @theme {
   /* Marca (escala neutra pura, del blanco al negro) */
   --color-marca-50: #fafafa;
@@ -133,6 +139,54 @@
 
   @media (prefers-reduced-motion: reduce) {
     .animar-entrada {
+      animation: none;
+    }
+  }
+
+  /*
+   * Polo de barbería: rayas diagonales que giran despacio.
+   * El ciclo recorre exactamente un periodo del patrón (24 px a 45° →
+   * 17 px en cada eje) para que el giro sea continuo, sin salto.
+   */
+  @keyframes poleGirar {
+    from {
+      background-position: 0 0;
+    }
+    to {
+      background-position: 17px -17px;
+    }
+  }
+
+  .pole-tubo {
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--color-marca-950) 0 6px,
+      var(--color-superficie) 6px 12px,
+      var(--color-marca-400) 12px 18px,
+      var(--color-superficie) 18px 24px
+    );
+    box-shadow:
+      inset 2px 0 3px rgb(255 255 255 / 0.35),
+      inset -2px 0 5px rgb(0 0 0 / 0.3);
+    animation: poleGirar 1.6s linear infinite;
+  }
+
+  /* Variante para fondos oscuros: rayas claras para que no se pierda. */
+  .pole-tubo-oscuro {
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--color-superficie) 0 6px,
+      var(--color-marca-400) 6px 12px,
+      var(--color-marca-700) 12px 18px,
+      var(--color-marca-400) 18px 24px
+    );
+    box-shadow:
+      inset 2px 0 3px rgb(255 255 255 / 0.2),
+      inset -2px 0 5px rgb(0 0 0 / 0.5);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pole-tubo {
       animation: none;
     }
   }

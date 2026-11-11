@@ -1,4 +1,4 @@
-import { createContext, useCallback, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import * as authService from '../services/authService'
 import type {
   AuthResponse,
@@ -15,12 +15,14 @@ import type {
 export interface ContextoAuth {
   usuario: UsuarioResponse | null
   rol: Rol | null
+  /** Mientras se pregunta al backend si hay sesión viva en la cookie. */
+  cargando: boolean
   estaAutenticado: boolean
   registrar: (datos: RegistroRequest) => Promise<UsuarioResponse>
   iniciarSesion: (datos: LoginRequest) => Promise<UsuarioResponse>
   renovarSesion: () => Promise<void>
   cerrarSesion: () => Promise<void>
-  /** Deja la sesión lista para cuando el backend exponga /api/auth. */
+  /** Pregunta al backend si hay sesión viva y la restaura si la hay. */
   restaurarSesion: () => Promise<void>
 }
 
@@ -28,6 +30,30 @@ export const AuthContext = createContext<ContextoAuth | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<UsuarioResponse | null>(null)
+  const [cargando, setCargando] = useState(true)
+
+  /**
+   * Al arrancar preguntamos con la cookie si hay sesión viva: el pase corto
+   * vive solo en memoria y se pierde al recargar, así que la sesión vuelve
+   * sin pedir de nuevo el celular y la contraseña.
+   */
+  useEffect(() => {
+    let montado = true
+    authService
+      .renovarSesion()
+      .then((sesion) => {
+        if (montado) setUsuario(sesion.usuario)
+      })
+      .catch(() => {
+        if (montado) setUsuario(null)
+      })
+      .finally(() => {
+        if (montado) setCargando(false)
+      })
+    return () => {
+      montado = false
+    }
+  }, [])
 
   const aplicarSesion = useCallback((sesion: AuthResponse) => {
     setUsuario(sesion.usuario)
@@ -44,6 +70,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [aplicarSesion],
   )
 
+  const restaurarSesion = useCallback(async () => {
+    try {
+      aplicarSesion(await authService.renovarSesion())
+    } catch {
+      setUsuario(null)
+    }
+  }, [aplicarSesion])
+
   const renovarSesion = useCallback(async () => {
     aplicarSesion(await authService.renovarSesion())
   }, [aplicarSesion])
@@ -56,30 +90,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // TODO: restaurar sesión con refresh cuando exista el módulo auth.
-  // Esta función está lista, pero no se invoca al arrancar: hoy /api/auth no
-  // existe y la petición dispararía el diálogo de autenticación básica del
-  // navegador. Cuando el backend implemente JWT, llamarla desde un useEffect.
-  const restaurarSesion = useCallback(async () => {
-    try {
-      aplicarSesion(await authService.renovarSesion())
-    } catch {
-      setUsuario(null)
-    }
-  }, [aplicarSesion])
-
   const valor = useMemo<ContextoAuth>(
     () => ({
       usuario,
       rol: usuario?.rol ?? null,
+      cargando,
       estaAutenticado: usuario !== null,
       registrar,
       iniciarSesion,
+      restaurarSesion,
       renovarSesion,
       cerrarSesion,
-      restaurarSesion,
     }),
-    [usuario, registrar, iniciarSesion, renovarSesion, cerrarSesion, restaurarSesion],
+    [usuario, cargando, registrar, iniciarSesion, restaurarSesion, renovarSesion, cerrarSesion],
   )
 
   return <AuthContext.Provider value={valor}>{children}</AuthContext.Provider>
