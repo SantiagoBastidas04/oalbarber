@@ -1,9 +1,9 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { env } from '../config/env'
 import { RUTAS } from '../config/rutas'
-import type { AuthResponse } from '../types/auth'
 import type { ApiError } from '../types/error'
-import { guardarToken, limpiarToken, obtenerToken } from './tokenStore'
+import { limpiarToken, obtenerToken } from './tokenStore'
+import { renovarSesion } from './authService'
 
 /** Marca interna para no reintentar dos veces la misma petición. */
 interface ConfigReintentable extends InternalAxiosRequestConfig {
@@ -76,31 +76,6 @@ apiClient.interceptors.request.use((config) => {
   return config
 })
 
-let renovacionEnCurso: Promise<string> | null = null
-
-/**
- * Renueva el token de acceso una sola vez aunque varias peticiones reciban 401
- * al mismo tiempo: todas esperan la misma promesa.
- */
-function renovarTokenAcceso(): Promise<string> {
-  renovacionEnCurso ??= axios
-    .post<AuthResponse>(
-      `${env.apiBaseUrl}/auth/refresh`,
-      null,
-      { withCredentials: true },
-    )
-    .then((respuesta) => {
-      const token = respuesta.data.tokenAcceso
-      guardarToken(token)
-      return token
-    })
-    .finally(() => {
-      renovacionEnCurso = null
-    })
-
-  return renovacionEnCurso
-}
-
 function redirigirAIngresar(): void {
   if (window.location.pathname === RUTAS.ingresar) {
     return
@@ -119,8 +94,8 @@ apiClient.interceptors.response.use(
     if (es401 && config && !config._reintentado && !esRutaAuth) {
       config._reintentado = true
       try {
-        const token = await renovarTokenAcceso()
-        config.headers.Authorization = `Bearer ${token}`
+        const sesion = await renovarSesion()
+        config.headers.Authorization = `Bearer ${sesion.tokenAcceso}`
         return apiClient(config)
       } catch {
         limpiarToken()

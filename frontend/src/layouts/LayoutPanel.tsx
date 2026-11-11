@@ -44,7 +44,7 @@ function claseItem({ isActive }: { isActive: boolean }): string {
 
 /** Estructura del panel: navegación lateral en escritorio y desplegable en móvil. */
 export function LayoutPanel() {
-  const { rol } = useAuth()
+  const { usuario, rol, cerrarSesion } = useAuth()
   const items = rol ? ITEMS_PANEL.filter((item) => item.roles.includes(rol)) : []
 
   return (
@@ -83,14 +83,26 @@ export function LayoutPanel() {
               <span className="font-bold text-texto">OalBarber</span> · Panel
             </p>
             <p className="hidden text-sm text-texto-suave md:block">
-              Sesión: <span className="font-semibold text-texto">{rol ? ETIQUETAS_ROL[rol] : '—'}</span>
+              {usuario?.nombre ?? '—'} ·{' '}
+              <span className="font-semibold text-texto">
+                {rol ? ETIQUETAS_ROL[rol] : '—'}
+              </span>
             </p>
-            <Link
-              to={RUTAS.inicio}
-              className="inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-marca-700 hover:bg-marca-50"
-            >
-              Ir al sitio
-            </Link>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => cerrarSesion()}
+                className="inline-flex min-h-11 items-center rounded-full border border-marca-300 px-4 font-mono text-xs font-medium uppercase tracking-[0.14em] text-texto transition-colors duration-150 hover:border-marca-900 hover:bg-marca-50 active:translate-y-px"
+              >
+                Salir
+              </button>
+              <Link
+                to={RUTAS.inicio}
+                className="inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium text-marca-700 hover:bg-marca-50"
+              >
+                Ir al sitio
+              </Link>
+            </div>
           </div>
 
           <nav aria-label="Navegación del panel móvil" className="border-t border-borde md:hidden">

@@ -7,12 +7,20 @@ import { RutaProtegida } from './RutaProtegida'
 
 function crearContexto(rol: Rol | null): ContextoAuth {
   const usuario: UsuarioResponse | null = rol
-    ? { id: 1, nombre: 'Persona de prueba', telefono: '+573001234567', rol, activo: true }
+    ? {
+        id: '3f1b6c2e-9a4d-4c8b-8f7e-1a2b3c4d5e6f',
+        nombre: 'Persona de prueba',
+        celular: '+573001234567',
+        rol,
+        activo: true,
+        fechaCreacion: '2026-11-07T10:15:30-05:00',
+      }
     : null
 
   return {
     usuario,
     rol,
+    cargando: false,
     estaAutenticado: usuario !== null,
     registrar: vi.fn(),
     iniciarSesion: vi.fn(),

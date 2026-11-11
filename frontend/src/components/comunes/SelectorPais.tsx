@@ -164,7 +164,7 @@ export function SelectorPais({ paises, valor, onCambio, invalido = false }: Prop
         aria-controls={`${id}-lista`}
         aria-invalid={invalido || undefined}
         aria-label={`País del celular: ${pais.nombre}, prefijo más ${pais.codigo}`}
-        className="flex h-full items-center gap-2 pl-2.5 pr-2 text-texto transition-colors duration-150 hover:bg-marca-100 active:bg-marca-200 focus-visible:bg-marca-100/70"
+        className="flex h-full items-center gap-2 rounded-l-xl pl-2.5 pr-2 text-texto transition-colors duration-150 hover:bg-marca-100 active:bg-marca-200 focus-visible:bg-marca-100/70"
       >
         <Bandera iso={pais.iso} />
         <span className="font-mono text-sm font-medium tabular-nums">+{pais.codigo}</span>
@@ -185,7 +185,7 @@ export function SelectorPais({ paises, valor, onCambio, invalido = false }: Prop
           aria-activedescendant={idOpcion(activo)}
           tabIndex={-1}
           onKeyDown={alTeclearLista}
-          className="absolute left-0 top-full z-30 mt-2 max-h-72 w-80 max-w-[calc(100vw-2.5rem)] overflow-y-auto overscroll-contain border border-marca-300 bg-superficie py-1 shadow-xl shadow-marca-900/10 focus:outline-none"
+          className="absolute left-0 top-full z-30 mt-2 max-h-72 w-80 max-w-[calc(100vw-2.5rem)] overflow-y-auto overscroll-contain rounded-2xl border border-marca-300 bg-superficie p-1 shadow-[0_24px_48px_-24px_rgba(0,0,0,0.35)] focus:outline-none"
         >
           {paises.map((opcion, indice) => {
             const seleccionado = opcion.codigo === pais.codigo
@@ -200,8 +200,8 @@ export function SelectorPais({ paises, valor, onCambio, invalido = false }: Prop
                 data-activo={esActivo}
                 onMouseEnter={() => setActivo(indice)}
                 onClick={() => elegir(opcion)}
-                className={`flex min-h-11 cursor-pointer items-center gap-3 px-3 py-2.5 text-sm transition-colors duration-150 hover:bg-marca-50 active:bg-marca-200 ${
-                  esActivo ? 'bg-marca-100' : 'bg-superficie'
+                className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors duration-150 hover:bg-marca-50 active:bg-marca-200 ${
+                  esActivo ? 'bg-marca-100' : 'bg-transparent'
                 }`}
               >
                 <Bandera iso={opcion.iso} />
