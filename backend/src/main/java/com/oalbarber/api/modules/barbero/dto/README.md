@@ -8,9 +8,10 @@ Perfil del barbero. La barbería tiene exactamente dos: el administrador, que ta
 
 ## Qué debe ir en esta carpeta
 
-- Los objetos de transferencia del módulo `barbero`: `BarberoRequest`, `BarberoResponse`.
+- Los objetos de transferencia del módulo `barbero`: `BarberoRequest`, `CambiarEstadoBarberoRequest`, `BarberoPublicoResponse` y `BarberoAdminResponse`.
 - DTOs de entrada con Bean Validation (`@NotBlank`, `@NotNull`, `@Positive`, `@Pattern` para el celular `+57...`) y documentación OpenAPI con `@Schema`.
-- DTOs de salida que solo incluyen los campos que el cliente puede ver; nunca `password_hash`, tokens internos ni datos de otras personas.
+- `BarberoPublicoResponse` no contiene datos personales de la cuenta; `BarberoAdminResponse` es para el panel y sí contiene nombre y celular. Ninguna respuesta incluye contraseñas ni hashes.
+- `BarberoRequest` limita `nombrePublico` a 100 caracteres y `descripcion` a 500. `foto` solo admite un nombre de archivo estático en minúsculas con extensión `.jpg`, `.jpeg`, `.png` o `.webp`, sin rutas.
 - Registros (`record`) inmutables cuando no se necesite mutabilidad; clases solo si el framework lo exige.
 - Representación de fechas en ISO-8601 con offset (`2026-11-05T10:00:00-05:00`) y precios como número decimal, no como texto.
 
@@ -25,7 +26,7 @@ Perfil del barbero. La barbería tiene exactamente dos: el administrador, que ta
 ## Convenciones de nombres
 
 - Paquete `com.oalbarber.api.modules.barbero.dto`.
-- Sufijos `Request` para entradas y `Response` para salidas: `BarberoRequest`, `BarberoResponse`.
+- Sufijos `Request` para entradas y `Response` para salidas.
 - Nombres en español sin tildes; los términos técnicos estándar (`Request`, `Response`, `DTO`) se mantienen en inglés.
 - Campos en camelCase; el JSON conserva camelCase (no se traduce a snake_case).
 - La validación de formato y obligatoriedad vive aquí; la validación contra la base, en el service.

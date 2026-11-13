@@ -4,7 +4,7 @@ Paquete: `com.oalbarber.api.modules.barbero.domain`.
 
 ## Contexto del módulo
 
-Perfil del barbero. La barbería tiene exactamente dos: el administrador, que también corta, y un barbero contratado. El perfil enlaza un usuario con rol BARBERO o ADMIN con su agenda.
+Perfil profesional enlazado a un usuario con rol `BARBERO` o `ADMINISTRADOR`.
 
 ## Qué debe ir en esta carpeta
 
@@ -36,10 +36,11 @@ Perfil del barbero. La barbería tiene exactamente dos: el administrador, que ta
 - Campos: `id`, `usuarioId` (columna `usuario_id`, referencia única a `usuario`), `activo`.
 - El usuario referenciado debe tener rol `BARBERO` o `ADMIN`; la validación vive en el service.
 - El perfil no guarda credenciales ni datos personales: el nombre y el celular están en `usuario`.
-- Solo existen dos registros (el administrador y el barbero contratado); se crean con datos
-  iniciales en una migración, no con lógica de arranque.
+- Los perfiles no se insertan desde una migración. `AdminInicializador` asegura el perfil del
+  administrador inicial al arrancar; las cuentas `BARBERO` y sus perfiles se crean desde el flujo
+  administrativo del módulo.
 
 ## Referencias
 
 - Requisitos relacionados del SRS: RF-10, RN-01, RN-12.
-- Relación con otros módulos: Depende de `usuario` para el nombre y las credenciales; `horario` y `cita` referencian al barbero por su identificador. No crea usuarios ni contraseñas.
+- Relación con otros módulos: guarda el UUID de `usuario`; el nombre y celular de cuenta se consultan mediante `UsuarioService`.

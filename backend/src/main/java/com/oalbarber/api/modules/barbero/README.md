@@ -4,7 +4,7 @@ Paquete raíz: `com.oalbarber.api.modules.barbero`.
 
 ## Responsabilidad
 
-Perfil del barbero. La barbería tiene exactamente dos: el administrador, que también corta, y un barbero contratado. El perfil enlaza un usuario con rol BARBERO o ADMIN con su agenda.
+Perfil profesional enlazado a una cuenta de `usuario` con rol `BARBERO` o `ADMINISTRADOR`. El sistema no presupone una cantidad fija de barberos.
 
 ## Subcarpetas
 
@@ -35,7 +35,7 @@ Perfil del barbero. La barbería tiene exactamente dos: el administrador, que ta
 
 ## Relación con otros módulos
 
-Depende de `usuario` para el nombre y las credenciales; `horario` y `cita` referencian al barbero por su identificador. No crea usuarios ni contraseñas.
+`BarberoService` crea la cuenta `BARBERO` mediante `UsuarioService` y luego su perfil en la misma transacción. `AdminInicializador` asegura el perfil del administrador inicial después de crear o localizar su cuenta; no altera cuentas existentes con otro rol. El DTO público omite el nombre y celular de la cuenta. Desactivar un perfil no desactiva la cuenta de usuario.
 
 ## Requisitos del SRS
 

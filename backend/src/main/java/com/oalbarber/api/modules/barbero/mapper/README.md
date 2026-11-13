@@ -8,8 +8,9 @@ Perfil del barbero. La barbería tiene exactamente dos: el administrador, que ta
 
 ## Qué debe ir en esta carpeta
 
-- La conversión entre entidades del módulo `barbero` y sus DTOs: `BarberoMapper`.
-- Métodos explícitos `aEntidad`, `aResponse`, `aListaResponse` y los que hagan falta, con correspondencia campo a campo.
+- La conversión entre `Barbero` y `BarberoPublicoResponse` / `BarberoAdminResponse` mediante `BarberoMapper`.
+- `aPublico` no expone datos de cuenta. `aAdmin` recibe también el `UsuarioResponse` preparado por el service para incluir nombre y celular.
+- `aEntidad` usa la fábrica de dominio para crear un perfil desde el DTO de entrada; nunca asigna la contraseña al perfil.
 - Conversión de enums, fechas y valores monetarios en un solo lugar, para que el formato sea consistente.
 - Mapeo seguro frente a nulos y a relaciones no cargadas (solo se accede a lo que el service ya preparó).
 
@@ -26,7 +27,7 @@ Perfil del barbero. La barbería tiene exactamente dos: el administrador, que ta
 - Paquete `com.oalbarber.api.modules.barbero.mapper`.
 - Clase en PascalCase terminada en `Mapper`: `BarberoMapper`.
 - Métodos en español: `aEntidad`, `aResponse`, `aListaResponse`.
-- Implementación con métodos estáticos en una clase final o como `@Component`; no se mezclan ambos estilos en el mismo módulo.
+- Implementación MapStruct con `componentModel = "spring"` para inyección por constructor.
 - Si el mapeo se vuelve complejo, se justifica y se documenta, pero no se delega en la entidad.
 
 ## Referencias

@@ -33,13 +33,17 @@ Perfil del barbero. La barbería tiene exactamente dos: el administrador, que ta
 ## Detalle de este módulo
 
 - `BarberoService` lista los barberos activos y obtiene el perfil por identificador o por usuario.
-- Crea el perfil de un usuario existente con rol `BARBERO` o `ADMIN` y lo desactiva cuando el
-  administrador lo indica.
-- No crea usuarios, contraseñas ni horarios: esas responsabilidades son de `usuario`/`auth` y de
-  `horario`.
-- Un barbero inactivo no debe aparecer en la disponibilidad; el filtro se aplica al consultar.
+- Crea una cuenta con rol `BARBERO` mediante `UsuarioService` y su perfil dentro de una única
+  transacción; la contraseña se cifra en el módulo `usuario`.
+- Asegura idempotentemente el perfil de una cuenta con rol real `ADMINISTRADOR` para
+  `AdminInicializador`; no cambia cuentas de otros roles.
+- Cambia el estado del perfil sin cambiar `usuario.activo`. Por ello, el estado de cuenta y el del
+  perfil son independientes.
+- La lista pública incluye solo perfiles activos y nunca expone nombre ni celular de la cuenta.
+- El listado administrativo incluye perfiles activos e inactivos y datos de cuenta.
+- Un perfil inactivo no debe aparecer en la disponibilidad; las consultas deben aplicar el filtro.
 
 ## Referencias
 
 - Requisitos relacionados del SRS: RF-10, RN-01, RN-12.
-- Relación con otros módulos: Depende de `usuario` para el nombre y las credenciales; `horario` y `cita` referencian al barbero por su identificador. No crea usuarios ni contraseñas.
+- Relación con otros módulos: consume `UsuarioService` para crear y consultar cuentas. Las relaciones con horarios y citas se implementarán en sus tareas correspondientes.
