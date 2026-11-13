@@ -9,7 +9,7 @@ Perfil del barbero. La barbería tiene exactamente dos: el administrador, que ta
 ## Qué debe ir en esta carpeta
 
 - Interfaces Spring Data JPA del módulo `barbero`: `BarberoRepository`.
-- Métodos derivados con nombres claros (`findByActivoTrue`, `existsByTelefono`, `findByBarberoIdAndInicioLessThan`).
+- Métodos derivados con nombres claros (`findByActivoTrue`, `findByUsuarioId`, `existsByUsuarioId`).
 - Consultas `@Query` solo cuando el nombre derivado no alcance; siempre con parámetros nombrados y sin concatenar SQL.
 - Proyecciones o DTOs de consulta cuando se necesite leer solo unas columnas.
 - Bloqueos (`@Lock`) o consultas de solapamiento cuando la regla de negocio lo exija, documentando el motivo.
@@ -31,7 +31,7 @@ Perfil del barbero. La barbería tiene exactamente dos: el administrador, que ta
 
 ## Detalle de este módulo
 
-- `BarberoRepository extends JpaRepository<Barbero, Long>`.
+- `BarberoRepository extends JpaRepository<Barbero, UUID>`.
 - Consultas previstas: `findByActivoTrue`, `findByUsuarioId`, `existsByUsuarioId`.
 - La relación con `usuario` se resuelve en el service de `barbero` o en el mapper, no con una
   consulta cruzada desde otro módulo.
