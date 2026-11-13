@@ -57,13 +57,10 @@ class BarberoRepositoryTest {
 
     @Test
     void encuentraSoloLosPerfilesActivos() {
-        barberoRepository.saveAndFlush(Barbero.builder()
-                .usuarioId(USUARIO_ACTIVO_ID)
-                .build());
-        barberoRepository.saveAndFlush(Barbero.builder()
-                .usuarioId(USUARIO_INACTIVO_ID)
-                .activo(false)
-                .build());
+        barberoRepository.saveAndFlush(Barbero.crear(USUARIO_ACTIVO_ID));
+        Barbero inactivo = Barbero.crear(USUARIO_INACTIVO_ID);
+        inactivo.cambiarEstado(false);
+        barberoRepository.saveAndFlush(inactivo);
 
         List<Barbero> activos = barberoRepository.findByActivoTrue();
 
@@ -75,10 +72,8 @@ class BarberoRepositoryTest {
 
     @Test
     void buscaUnPerfilPorUsuario() {
-        Barbero guardado = barberoRepository.saveAndFlush(Barbero.builder()
-                .usuarioId(USUARIO_ACTIVO_ID)
-                .nombrePublico("Barbero de prueba")
-                .build());
+        Barbero guardado = barberoRepository.saveAndFlush(
+                Barbero.crear(USUARIO_ACTIVO_ID, "Barbero de prueba", null, null));
 
         assertThat(barberoRepository.findByUsuarioId(USUARIO_ACTIVO_ID))
                 .contains(guardado);
@@ -88,9 +83,7 @@ class BarberoRepositoryTest {
 
     @Test
     void compruebaSiUnUsuarioYaTienePerfil() {
-        barberoRepository.saveAndFlush(Barbero.builder()
-                .usuarioId(USUARIO_ACTIVO_ID)
-                .build());
+        barberoRepository.saveAndFlush(Barbero.crear(USUARIO_ACTIVO_ID));
 
         assertThat(barberoRepository.existsByUsuarioId(USUARIO_ACTIVO_ID)).isTrue();
         assertThat(barberoRepository.existsByUsuarioId(USUARIO_SIN_PERFIL_ID)).isFalse();

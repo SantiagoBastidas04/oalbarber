@@ -1,6 +1,7 @@
 package com.oalbarber.api.modules.barbero.domain;
 
 import java.util.UUID;
+import java.util.Objects;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,10 +11,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 /** Perfil profesional enlazado a una cuenta de usuario mediante su UUID. */
 @Entity
@@ -21,8 +20,6 @@ import lombok.Setter;
         @UniqueConstraint(name = "uk_barbero_usuario_id", columnNames = "usuario_id")
 })
 @Getter
-@Setter
-@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Barbero {
 
@@ -43,9 +40,30 @@ public class Barbero {
     @Column(length = 255)
     private String foto;
 
-    @Builder.Default
     @Column(name = "activo", nullable = false)
     private boolean activo = true;
+
+    /** Crea un perfil sin datos de presentación, activo por defecto. */
+    public static Barbero crear(UUID usuarioId) {
+        return crear(usuarioId, null, null, null);
+    }
+
+    /** Crea un perfil con sus datos opcionales de presentación. */
+    public static Barbero crear(UUID usuarioId, String nombrePublico, String descripcion,
+                                String foto) {
+        Barbero barbero = new Barbero();
+        barbero.usuarioId = Objects.requireNonNull(usuarioId,
+                "El usuario asociado es obligatorio.");
+        barbero.nombrePublico = nombrePublico;
+        barbero.descripcion = descripcion;
+        barbero.foto = foto;
+        return barbero;
+    }
+
+    /** Cambia únicamente el estado del perfil; no modifica la cuenta de usuario. */
+    public void cambiarEstado(boolean activo) {
+        this.activo = activo;
+    }
 
     @Override
     public boolean equals(Object objeto) {
