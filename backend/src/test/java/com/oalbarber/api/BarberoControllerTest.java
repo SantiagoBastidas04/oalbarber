@@ -1,6 +1,7 @@
 package com.oalbarber.api;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -15,24 +16,30 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-import org.springframework.security.test.context.support.WithMockUser;
 
+import com.oalbarber.api.common.exception.GlobalExceptionHandler;
 import com.oalbarber.api.common.exception.RecursoDuplicadoException;
 import com.oalbarber.api.common.exception.RecursoNoEncontradoException;
+import com.oalbarber.api.config.SecurityConfig;
+import com.oalbarber.api.modules.auth.service.TokenServicio;
+import com.oalbarber.api.modules.barbero.controller.BarberoController;
 import com.oalbarber.api.modules.barbero.dto.BarberoAdminResponse;
 import com.oalbarber.api.modules.barbero.dto.BarberoPublicoResponse;
 import com.oalbarber.api.modules.barbero.service.BarberoService;
 
-@Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = "JWT_SECRETO=clave-falsa-solo-pruebas-no-usar-produccion-123456")
-@AutoConfigureMockMvc
+@Import({SecurityConfig.class, GlobalExceptionHandler.class,
+        BarberoControllerTest.SeguridadTestConfig.class})
+@WebMvcTest(BarberoController.class)
 class BarberoControllerTest {
 
     private static final UUID PERFIL_ID =
@@ -45,6 +52,18 @@ class BarberoControllerTest {
 
     @MockitoBean
     private BarberoService barberoService;
+
+    /** Conserva la cadena JWT real; los tests de controlador no validan firmas criptográficas. */
+    @TestConfiguration(proxyBeanMethods = false)
+    static class SeguridadTestConfig {
+
+        @Bean
+        TokenServicio tokenServicio() {
+            TokenServicio servicio = mock(TokenServicio.class);
+            when(servicio.decodificador()).thenReturn(mock(JwtDecoder.class));
+            return servicio;
+        }
+    }
 
     @Test
     void listadoPublicoDevuelveSoloRespuestaPublicaSinAutenticacion() throws Exception {
