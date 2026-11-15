@@ -9,6 +9,8 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import org.flywaydb.core.Flyway;
@@ -36,8 +38,13 @@ class BarberoMigracionTest {
                 .locations("classpath:db/migration")
                 .load();
 
-        assertEquals(3, flyway.migrate().migrationsExecuted,
-                "La base vacía debe aplicar V1, V2 y V3");
+        assertEquals(4, flyway.migrate().migrationsExecuted,
+                "La base vacía debe aplicar V1, V2, V3 y V4");
+        assertEquals(List.of("1", "2", "3", "4"),
+                Arrays.stream(flyway.info().applied())
+                        .map(migracion -> migracion.getVersion().getVersion())
+                        .toList(),
+                "Flyway debe aplicar la secuencia V1 a V4");
     }
 
     @Test
