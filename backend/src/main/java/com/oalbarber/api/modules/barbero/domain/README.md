@@ -43,4 +43,4 @@ Perfil profesional enlazado a un usuario con rol `BARBERO` o `ADMINISTRADOR`.
 ## Referencias
 
 - Requisitos relacionados del SRS: RF-10, RN-01, RN-12.
-- Relación con otros módulos: guarda el UUID de `usuario`; el nombre y celular de cuenta se consultan mediante `UsuarioService`. La migración V3 usa FK `ON DELETE RESTRICT`.
+- Relación con otros módulos: guarda el UUID de `usuario`; el nombre y celular de cuenta se consultan mediante `UsuarioService`. La migración V4 usa FK `ON DELETE RESTRICT`.

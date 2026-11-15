@@ -7,7 +7,7 @@
 
 `usuario` ya es la identidad común para clientes, barberos y administradores. El perfil
 profesional `barbero` referencia esa identidad y necesita un identificador estable en API y
-persistencia. Las migraciones V1, V2 y V3 implementadas usan UUID.
+persistencia. El esquema actual usa UUID para `usuario`, `sesion_refresco` y `barbero`.
 
 ## Decisión
 

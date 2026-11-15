@@ -1,14 +1,14 @@
 # Modelo de datos OalBarber
 
-**Estado:** esquema implementado y entidades conceptuales aún no disponibles. El SRS vigente se
-conserva sin cambios.
+**Estado:** esquema implementado para cuentas, catálogo y perfiles; la relación barbero-servicio,
+agenda y citas aún no están implementadas. El SRS vigente se conserva sin cambios.
 
 ## Estado implementado
 
-Las migraciones actuales crean `usuario` (V1), `sesion_refresco` (V2) y `barbero` (V3). Las tres
-usan UUID. V3 crea únicamente `barbero`, con `usuario_id` único, FK a
-`usuario(id)` y `ON DELETE RESTRICT`; no contiene referencias a servicios ni citas. La numeración
-V3 puede requerir coordinación con migraciones del catálogo de servicios.
+Las migraciones actuales crean `usuario` (V1), `sesion_refresco` (V2), `servicio` (V3) y
+`barbero` (V4). Las tablas `usuario`, `sesion_refresco` y `barbero` usan UUID. V4 crea únicamente
+`barbero`, con `usuario_id` único, FK a `usuario(id)` y `ON DELETE RESTRICT`; no contiene
+referencias a servicios ni citas. V4 sigue la migración V3 ya asignada al catálogo.
 
 ```mermaid
 erDiagram
