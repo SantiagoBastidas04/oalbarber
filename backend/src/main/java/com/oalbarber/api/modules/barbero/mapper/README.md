@@ -4,13 +4,13 @@ Paquete: `com.oalbarber.api.modules.barbero.mapper`.
 
 ## Contexto del módulo
 
-Perfil del barbero. La barbería tiene exactamente dos: el administrador, que también corta, y un barbero contratado. El perfil enlaza un usuario con rol BARBERO o ADMIN con su agenda.
+Perfil profesional enlazado a una cuenta con rol `BARBERO` o `ADMINISTRADOR`.
 
 ## Qué debe ir en esta carpeta
 
 - La conversión entre `Barbero` y `BarberoPublicoResponse` / `BarberoAdminResponse` mediante `BarberoMapper`.
 - `aPublico` no expone datos de cuenta. `aAdmin` recibe también el `UsuarioResponse` preparado por el service para incluir nombre y celular.
-- `aEntidad` usa la fábrica de dominio para crear un perfil desde el DTO de entrada; nunca asigna la contraseña al perfil.
+- `aEntidad` usa la fábrica de dominio para crear un perfil desde el DTO de entrada y el UUID de usuario; nunca asigna la contraseña al perfil.
 - Conversión de enums, fechas y valores monetarios en un solo lugar, para que el formato sea consistente.
 - Mapeo seguro frente a nulos y a relaciones no cargadas (solo se accede a lo que el service ya preparó).
 
@@ -33,4 +33,4 @@ Perfil del barbero. La barbería tiene exactamente dos: el administrador, que ta
 ## Referencias
 
 - Requisitos relacionados del SRS: RF-10, RN-01, RN-12.
-- Relación con otros módulos: Depende de `usuario` para el nombre y las credenciales; `horario` y `cita` referencian al barbero por su identificador. No crea usuarios ni contraseñas.
+- Relación con otros módulos: el service prepara el `UsuarioResponse` para la salida administrativa; el mapper no crea cuentas ni contraseñas.

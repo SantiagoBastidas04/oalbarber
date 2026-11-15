@@ -34,7 +34,7 @@ Perfil profesional enlazado a un usuario con rol `BARBERO` o `ADMINISTRADOR`.
 
 - Entidad `Barbero` → tabla `barbero`.
 - Campos: `id`, `usuarioId` (columna `usuario_id`, referencia única a `usuario`), `activo`.
-- El usuario referenciado debe tener rol `BARBERO` o `ADMIN`; la validación vive en el service.
+- El usuario referenciado debe tener rol `BARBERO` o `ADMINISTRADOR`; la validación vive en el service.
 - El perfil no guarda credenciales ni datos personales: el nombre y el celular están en `usuario`.
 - Los perfiles no se insertan desde una migración. `AdminInicializador` asegura el perfil del
   administrador inicial al arrancar; las cuentas `BARBERO` y sus perfiles se crean desde el flujo
@@ -43,4 +43,4 @@ Perfil profesional enlazado a un usuario con rol `BARBERO` o `ADMINISTRADOR`.
 ## Referencias
 
 - Requisitos relacionados del SRS: RF-10, RN-01, RN-12.
-- Relación con otros módulos: guarda el UUID de `usuario`; el nombre y celular de cuenta se consultan mediante `UsuarioService`.
+- Relación con otros módulos: guarda el UUID de `usuario`; el nombre y celular de cuenta se consultan mediante `UsuarioService`. La migración V3 usa FK `ON DELETE RESTRICT`.

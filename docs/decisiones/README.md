@@ -24,6 +24,13 @@ Decisiones que ya se conocen y merecen un ADR al implementarse:
 - Imágenes del catálogo como archivos estáticos del frontend, sin subida.
 - Uso de `ProblemDetail` (RFC 7807) como formato único de error.
 
+## ADR del proyecto
+
+- [ADR-0001: UUID en identidades y perfiles](ADR-0001-uuid-en-identidades.md) — aceptado para
+  `usuario`, `sesion_refresco` y `barbero`; no define el ID del catálogo de servicios.
+- [ADR-0002: asignación barbero-servicio y consulta de citas futuras](ADR-0002-asignacion-barbero-servicio-y-consulta-citas.md)
+  — propuesta que requiere validar los contratos del catálogo y del módulo de citas.
+
 ## Qué NO va aquí
 
 - Decisiones triviales o reversibles sin coste (nombre de una variable, orden de imports).

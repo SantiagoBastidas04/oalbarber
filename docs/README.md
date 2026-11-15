@@ -9,7 +9,7 @@ documentación en el mismo Pull Request.
 |---|---|
 | `srs/` | Especificación de requisitos de software (fuente de verdad del alcance). |
 | `arquitectura/` | Diagramas y descripción del monolito modular, módulos, flujos e infraestructura. |
-| `api/` | Contrato de la API REST: OpenAPI, convenciones de endpoints y errores. |
+| `api/` | Documentación de la API REST, convenciones de endpoints y errores. |
 | `decisiones/` | Registros de decisiones de arquitectura (ADR). |
 
 ## Qué NO va aquí

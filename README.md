@@ -120,7 +120,7 @@ dependencia de HTTP y campo `canal` en cada cita).
 | Frontend | React 19 + TypeScript + Vite 8 + Tailwind CSS 4; React Router, TanStack Query, Axios, React Hook Form + Zod y lucide-react |
 | Contenedores | Docker + Docker Compose (SPA con nginx, API, PostgreSQL y pgAdmin) |
 | CI/CD | GitHub Actions con workflows separados por carpeta (propuesto) |
-| Documentación | OpenAPI, Markdown y ADR |
+| Documentación | Swagger UI, Markdown y ADR |
 
 ## 6. Arquitectura
 
@@ -133,7 +133,7 @@ controller → service → repository → domain
 ```
 
 - Paquete base: `com.oalbarber.api`.
-- `config/`: seguridad, CORS, OpenAPI y zona horaria.
+- `config/`: seguridad, CORS, documentación de Swagger y zona horaria.
 - `common/`: excepciones, DTOs compartidos y utilidades.
 - `modules/`: un submódulo por dominio (`auth`, `usuario`, `barbero`, `servicio`, `horario`,
   `cita`), cada uno con `controller/`, `service/`, `repository/`, `domain/`, `dto/` y `mapper/`
@@ -142,7 +142,7 @@ controller → service → repository → domain
   resultados, sin `HttpServletRequest`, `ResponseEntity` ni `SecurityContextHolder`. Así la web y,
   en el futuro, WhatsApp usan la misma agenda.
 - El campo `canal` de la cita registra el origen (`WEB`, `WHATSAPP`, `ADMIN`).
-- La API REST se documenta con OpenAPI.
+- La API REST se documenta en Swagger UI (`/swagger-ui.html`).
 - La integridad de la agenda se refuerza en PostgreSQL con una restricción de exclusión sobre el
   rango de cada barbero, que ignora las citas canceladas.
 
@@ -276,7 +276,7 @@ Cada carpeta de código y documentación tiene su propio `README.md` con lo que 
 
 ### Documentación
 
-- Cada endpoint se documenta con OpenAPI.
+- Cada endpoint se documenta para Swagger UI.
 - Javadoc en los métodos públicos de los services.
 - Las decisiones importantes se registran en `docs/decisiones/` (ADR).
 - El SRS vive en `docs/srs/`.
@@ -426,7 +426,7 @@ docker compose ps                 # estado y salud de los servicios
 2. Crear la rama de la tarea desde `develop` con el prefijo correspondiente.
 3. Implementar el cambio sin salirse del alcance del SRS.
 4. Escribir o actualizar las pruebas (unitarias y de integración cuando aplique).
-5. Actualizar la documentación afectada (`docs/`, OpenAPI, README de la carpeta).
+5. Actualizar la documentación afectada (`docs/` y el README de la carpeta).
 6. Abrir un Pull Request hacia `develop` describiendo qué cambia y cómo probarlo.
 7. Pedir revisión: se necesita al menos una aprobación y la CI en verde para fusionar.
 

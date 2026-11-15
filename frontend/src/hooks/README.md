@@ -4,8 +4,9 @@
 
 - `useAuth.ts`: acceso tipado a `AuthContext`; lanza un error claro si se usa fuera de
   `<AuthProvider>`.
-- En el futuro, hooks de React Query por recurso (`useServicios`, `useDisponibilidad`,
-  `useMisCitas`), siempre envolviendo un servicio de `services/`.
+- Hooks de React Query por recurso, siempre envolviendo un servicio de `services/`. `useBarberos.ts`
+  contiene las consultas para perfiles públicos y administrativos y las mutaciones de alta y
+  cambio de estado. La asignación de servicios por barbero todavía no está implementada.
 
 ## Qué NO debe ir aquí
 

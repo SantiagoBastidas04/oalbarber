@@ -15,7 +15,7 @@ Perfil profesional enlazado a una cuenta con rol `BARBERO` o `ADMINISTRADOR`. El
 - `GET /api/barberos` es público y devuelve solo perfiles activos con `BarberoPublicoResponse`.
 - `GET /api/barberos/admin`, `POST /api/barberos` y `PATCH /api/barberos/{id}/estado` son exclusivos de `ADMINISTRADOR`; las respuestas administrativas usan `BarberoAdminResponse`.
 - El cambio de estado solo altera el perfil: conserva activa la cuenta del usuario y sus sesiones.
-- Documentación OpenAPI de cada endpoint con `@Operation` y `@ApiResponse`, incluidos los errores `ProblemDetail`.
+- Documentación de cada endpoint visible en Swagger UI, con sus respuestas y errores `ProblemDetail`.
 
 ## Qué NO debe ir en esta carpeta
 
@@ -35,6 +35,6 @@ Perfil profesional enlazado a una cuenta con rol `BARBERO` o `ADMINISTRADOR`. El
 
 ## Referencias
 
-- `GET/PUT /api/barberos/{id}/servicios` pertenece a la Parte B y espera la integración de H-12.
+- `GET/PUT /api/barberos/{id}/servicios` no está implementado; requiere integrar los módulos de servicios y citas.
 - Requisitos relacionados del SRS: RF-10, RN-01, RN-12.
 - Relación con otros módulos: delega la creación y consulta de cuentas en `BarberoService`/`UsuarioService`; las respuestas públicas no revelan datos personales de la cuenta.

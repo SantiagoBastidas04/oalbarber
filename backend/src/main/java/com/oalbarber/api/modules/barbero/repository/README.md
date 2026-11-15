@@ -4,7 +4,7 @@ Paquete: `com.oalbarber.api.modules.barbero.repository`.
 
 ## Contexto del módulo
 
-Perfil del barbero. La barbería tiene exactamente dos: el administrador, que también corta, y un barbero contratado. El perfil enlaza un usuario con rol BARBERO o ADMIN con su agenda.
+Repositorio de perfiles profesionales enlazados a usuarios con rol `BARBERO` o `ADMINISTRADOR`.
 
 ## Qué debe ir en esta carpeta
 
@@ -39,4 +39,4 @@ Perfil del barbero. La barbería tiene exactamente dos: el administrador, que ta
 ## Referencias
 
 - Requisitos relacionados del SRS: RF-10, RN-01, RN-12.
-- Relación con otros módulos: Depende de `usuario` para el nombre y las credenciales; `horario` y `cita` referencian al barbero por su identificador. No crea usuarios ni contraseñas.
+- La tabla actual solo contiene el perfil y el UUID de su usuario; los repositorios de relación con servicios y citas todavía no están implementados.
