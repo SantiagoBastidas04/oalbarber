@@ -1,17 +1,17 @@
 package com.oalbarber.api.modules.servicio.controller;
 
 import java.util.List;
+import java.util.UUID;
 
+import com.oalbarber.api.modules.servicio.dto.ServicioEstadoRequest;
+import com.oalbarber.api.modules.servicio.dto.ServicioRequest;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.*;
 import com.oalbarber.api.modules.servicio.dto.ServicioResponse;
 import com.oalbarber.api.modules.servicio.service.ServicioService;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -56,5 +56,26 @@ public class ServicioController {
                     example = "false")
             @RequestParam(defaultValue = "false") boolean incluirInactivos) {
         return servicioService.listar(incluirInactivos);
+    }
+
+    @PostMapping
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ServicioResponse crear(@Valid @RequestBody ServicioRequest peticion) {
+        return servicioService.crear(peticion);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ServicioResponse actualizar(@PathVariable UUID id,
+                                       @Valid @RequestBody ServicioRequest peticion) {
+        return servicioService.actualizar(id, peticion);
+    }
+
+    @PatchMapping("/{id}/estado")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ServicioResponse cambiarEstado(@PathVariable UUID id,
+                                          @Valid @RequestBody ServicioEstadoRequest peticion) {
+        return servicioService.cambiarEstado(id, peticion.getActivo());
     }
 }

@@ -16,6 +16,7 @@ interface ProblemDetail {
   title?: string
   detail?: string
   instance?: string
+  codigo?: string
   errors?: Record<string, string>
 }
 
@@ -51,6 +52,7 @@ export function normalizarError(error: unknown): ApiError {
         'Ocurrió un error inesperado. Intenta de nuevo.',
       type: datos?.type,
       instance: datos?.instance,
+      codigo: datos?.codigo,
       erroresCampo: datos?.errors,
     }
   }

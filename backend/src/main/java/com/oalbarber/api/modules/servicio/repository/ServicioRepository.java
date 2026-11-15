@@ -8,5 +8,10 @@ import java.util.UUID;
 
 public interface ServicioRepository extends JpaRepository<Servicio, UUID> {
     List<Servicio> findByActivoTrueOrderByNombreAsc();
+
     List<Servicio> findAllByOrderByNombreAsc();
+
+    boolean existsByNombreIgnoreCase(String nombre);
+
+    boolean existsByNombreIgnoreCaseAndIdNot(String nombre, UUID id);
 }
