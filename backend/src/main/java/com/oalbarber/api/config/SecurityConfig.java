@@ -79,7 +79,10 @@ public class SecurityConfig {
                         // Entradas a la sesión: públicas porque aún no hay con qué autenticarse.
                         .requestMatchers(HttpMethod.POST, "/api/auth/registro", "/api/auth/login",
                                 "/api/auth/refresh", "/api/auth/logout").permitAll()
+                        // Catalogo publico.
+                        .requestMatchers(HttpMethod.GET, "/api/servicios").permitAll()
                         .anyRequest().authenticated())
+
                 // Cada petición con Authorization: Bearer ... se valida contra JwtDecoder;
                 // el claim `rol` se convierte en autoridad ROLE_... (ver conversorDeRoles).
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(
