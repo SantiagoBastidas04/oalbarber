@@ -11,6 +11,10 @@ Capa de comunicación con la API. Es la única que conoce `axios` y las rutas de
   (`ProblemDetail` o error de red).
 - `authService.ts`: `registrar`, `iniciarSesion`, `renovarSesion` y `cerrarSesion`; guarda o
   limpia el token según corresponda.
+- `barberosService.ts`: consulta perfiles activos (`GET /barberos`), lista todos para
+  administración (`GET /barberos/admin`), crea cuentas/perfiles (`POST /barberos`) y cambia el
+  estado del perfil (`PATCH /barberos/{id}/estado`). Los detalles están en la documentación de la
+  API de Swagger UI; no incluye asignación de servicios.
 
 ## Comportamiento ante un 401
 
@@ -25,7 +29,8 @@ Capa de comunicación con la API. Es la única que conoce `axios` y las rutas de
 - Tokens en `localStorage` o `sessionStorage`, ni logs con tokens o contraseñas.
 - URLs absolutas del backend: siempre relativas a `env.apiBaseUrl`, para que el proxy funcione.
 - `try/catch` que devuelvan datos falsos: los errores se propagan como `ApiError`.
-- Un servicio por pantalla: un archivo por recurso de la API (`citasService`, `serviciosService`).
+- Un servicio por recurso de la API (`barberosService`, `citasService`, `serviciosService`), no uno
+  por pantalla.
 
 ## Convenciones
 

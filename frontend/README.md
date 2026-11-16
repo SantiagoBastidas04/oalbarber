@@ -6,17 +6,16 @@ trabajan desde el panel.
 
 ## Estado actual
 
-**Esqueleto navegable con el registro de clientes conectado a la API.** Todas las rutas de la fase 1
-existen y se pueden recorrer; el formulario de `/registro` ya crea usuarios reales con
-`POST /api/usuarios/registro`. Las demás páginas siguen siendo marcadores con su título, los
-requisitos del SRS que implementarán y el texto "Pendiente de implementar".
+**Implementación parcial de la fase 1.** El registro y la autenticación están conectados, el panel
+de clientes está implementado y el panel de barberos cubre RF-10: lista perfiles
+activos e inactivos, crea perfiles y permite activar/desactivar solo el perfil. Otras páginas de
+reservas, catálogo, horarios y citas siguen en implementación.
 
-- La única llamada a la API al cargar la aplicación es el registro de clientes.
+- `GET /api/barberos` devuelve perfiles activos sin datos personales de cuenta.
+- El panel de barberos consume las operaciones administrativas descritas en la documentación de
+  la API (Swagger UI en `/swagger-ui.html`).
+- La asignación de servicios por barbero y el aviso por citas futuras todavía no están disponibles.
 - No se muestran servicios, precios ni horarios inventados.
-- La autenticación está preparada (cliente HTTP, token en memoria, contexto y guardas de rol);
-  el inicio de sesión espera el módulo `auth` del backend.
-- El resto de `/api/**` exige autenticación; el registro es el único endpoint público además de
-  `/actuator/health` y Swagger.
 
 ## Alcance de la fase 1
 
@@ -40,7 +39,8 @@ frontend/
 ├── tsconfig.json · tsconfig.app.json · tsconfig.node.json · .oxlintrc.json
 ├── public/
 │   ├── favicon.svg
-│   └── servicios/            fotos estáticas del catálogo (solo .gitkeep y README.md)
+│   ├── servicios/             fotos estáticas del catálogo
+│   └── barberos/              fotos estáticas referidas por los perfiles
 └── src/
     ├── main.tsx              QueryClient + AuthProvider + router
     ├── config/               env.ts, roles.ts, rutas.ts
@@ -153,11 +153,10 @@ memoria (`services/tokenStore.ts`); el refresh token va en una cookie `HttpOnly`
 `/no-autorizado` cuando el rol no está permitido. Es una ayuda de navegación, no seguridad: el
 backend valida permisos en cada endpoint (RNF-03).
 
-## API que el frontend espera (propuesta)
+## API: estado de implementación
 
-Este contrato lo propone el frontend a partir del SRS y de las convenciones de
-[`docs/api/README.md`](../docs/api/README.md). **El responsable del backend lo valida** y después
-se publica en `docs/api/openapi.yaml`; hasta entonces puede cambiar.
+Las operaciones de barberos implementadas están descritas en Swagger UI (`/swagger-ui.html`). Las demás filas son referencias al alcance
+planeado de fase 1 y no implican que los endpoints ya existan.
 
 | Método y ruta | Acceso | RF |
 |---|---|---|
@@ -167,7 +166,11 @@ se publica en `docs/api/openapi.yaml`; hasta entonces puede cambiar.
 | `POST /api/auth/logout` | Autenticado | RF-04 |
 | `GET /api/servicios` | Público | RF-07 |
 | `POST /api/servicios` · `PUT\|PATCH /api/servicios/{id}` | ADMIN | RF-08 |
-| `GET /api/barberos` | Público | RF-15 |
+| `GET /api/barberos` | Público; solo perfiles activos y sin datos de cuenta | RF-10 |
+| `GET /api/barberos/admin` | ADMINISTRADOR; incluye perfiles inactivos y datos de cuenta | RF-10 |
+| `POST /api/barberos` | ADMINISTRADOR; crea cuenta BARBERO y perfil | RF-10 |
+| `PATCH /api/barberos/{id}/estado` | ADMINISTRADOR; solo cambia estado del perfil | RF-10 |
+| `GET /api/barberos/{id}/servicios` · `PUT /api/barberos/{id}/servicios` | No disponible actualmente | RF-10 |
 | `GET /api/disponibilidad?servicioId&fecha&barberoId?` | Público | RF-16 |
 | `POST /api/citas` | CLIENTE | RF-17, RF-18 |
 | `GET /api/citas/mias` | CLIENTE | RF-19 |
@@ -185,9 +188,9 @@ se publica en `docs/api/openapi.yaml`; hasta entonces puede cambiar.
 Convenciones: prefijo `/api`, recursos en plural y en español, fechas ISO-8601 con offset de
 Bogotá (`2026-11-10T10:00:00-05:00`) y errores `ProblemDetail` (RFC 7807).
 
-El registro ya usa el contrato real del backend: `POST /api/usuarios/registro` recibe
-`{ nombre, celular, contrasena }` y devuelve `UsuarioResponse` sin sesión. Las rutas `/api/auth/*`
-siguen siendo una propuesta hasta que exista el módulo `auth`.
+El registro usa `POST /api/usuarios/registro` con `{ nombre, celular, contrasena }`. Los detalles
+de las operaciones de barberos están en Swagger UI; los endpoints aún no disponibles deben verificarse
+contra su módulo antes de integrarse.
 
 ## Imágenes del catálogo: archivos estáticos
 
@@ -212,6 +215,13 @@ foto inexistente responde `404`), mientras que `/servicios` sin barra final la a
 de React. Por eso el `try_files` del fallback de la SPA no usa `$uri/`: las carpetas no deben
 provocar un `301` que saque al usuario de la aplicación.
 
+## Fotos de perfiles de barbero
+
+Si se entregan imágenes, se guardan como archivos estáticos en `public/barberos/`; el campo `foto`
+solo contiene el nombre de archivo y el alta no sube archivos. Se admiten nombres simples en
+minúsculas con `.jpg`, `.jpeg`, `.png` o `.webp`. No se agregan fotos de muestra. Ver
+[`public/barberos/README.md`](public/barberos/README.md).
+
 ## Cómo agregar una página
 
 1. Crear `src/pages/<carpeta>/<Nombre>Page.tsx` con su `README.md` (RF que cubre).
@@ -226,8 +236,7 @@ provocar un `301` que saque al usuario de la aplicación.
 2. Crear `src/services/<recurso>Service.ts` y usar `apiClient` (nunca `axios` directo) para
    heredar el token y el manejo de `401`.
 3. Envolver la llamada en un hook de `src/hooks/` con su clave de React Query.
-4. Documentar el endpoint en la sección "API que el frontend espera" y avisar al responsable del
-   backend para que lo valide.
+4. Actualizar la documentación de la API en el mismo cambio que implementa el endpoint.
 
 ## Cómo agregar un tipo
 

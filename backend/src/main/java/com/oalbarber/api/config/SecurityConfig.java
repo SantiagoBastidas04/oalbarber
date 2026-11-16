@@ -76,6 +76,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(autorizacion -> autorizacion
                         .requestMatchers("/actuator/health/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/barberos").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/barberos/*/servicios").permitAll()
                         // Entradas a la sesión: públicas porque aún no hay con qué autenticarse.
                         .requestMatchers(HttpMethod.POST, "/api/auth/registro", "/api/auth/login",
                                 "/api/auth/refresh", "/api/auth/logout").permitAll()

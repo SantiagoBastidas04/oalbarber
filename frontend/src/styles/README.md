@@ -19,13 +19,13 @@ Cuatro variables, disponibles como utilidades `font-marca`, `font-display`, `fon
 | `--font-sans`    | `font-sans`    | Cuerpo, interfaz y formularios (Inter); es la base         |
 | `--font-mono`    | `font-mono`    | Etiquetas, códigos, cifras y microtexto (JetBrains Mono)   |
 
-La combinación sigue la recomendación *Classic Elegant* de `ui-ux-pro-max` (Playfair Display +
-Inter) con JetBrains Mono para las etiquetas. Inter se eligió como base porque es más legible que
-una serif en pantallas pequeñas y evita el zoom automático de iOS en los campos (16 px).
+La combinación usa Playfair Display e Inter con JetBrains Mono para las etiquetas. Inter se eligió
+como base porque es más legible que una serif en pantallas pequeñas y evita el zoom automático de
+iOS en los campos (16 px).
 
-La marca se separó de los títulos con **Bebas Neue**, tomada de la pareja *Bold Statement* de la
-misma skill: condensada, en mayúsculas y con fuerza de barbería. Se usa solo en el wordmark
-(`components/comunes/Marca.tsx`), nunca en párrafos, para no perder legibilidad.
+La marca se separó de los títulos con **Bebas Neue**: condensada, en mayúsculas y con presencia
+visual. Se usa solo en el wordmark (`components/comunes/Marca.tsx`), nunca en párrafos, para
+conservar la legibilidad.
 
 Existe además la variante `corto`, definida con `@custom-variant`: se activa en escritorio con
 ventanas de hasta 780 px de alto (`corto:py-4`, `corto:space-y-3`). Sirve para que el registro

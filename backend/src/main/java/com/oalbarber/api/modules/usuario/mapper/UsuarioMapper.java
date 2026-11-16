@@ -15,6 +15,7 @@ public interface UsuarioMapper{
     @Mapping(target = "fechaCreacion", ignore = true)
     @Mapping(target = "rol", ignore = true)
     @Mapping(target = "activo", ignore = true)
+    @Mapping(target = "contrasenaHash", ignore = true)
     Usuario toEntity(UsuarioRequest request);
 
     UsuarioResponse toResponse(Usuario usuario);
