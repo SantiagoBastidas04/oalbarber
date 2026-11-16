@@ -11,8 +11,6 @@ export interface ApiError {
   codigo?: string
   type?: string
   instance?: string
-  /** Motivo del error cuando el HTTP coincide: `NOMBRE_DUPLICADO`, `VALIDACION`… */
-  codigo?: string
   /** Errores de validación por campo, si el backend los envía. */
   erroresCampo?: Record<string, string>
 }
