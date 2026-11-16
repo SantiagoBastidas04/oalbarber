@@ -1,13 +1,17 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   cambiarEstadoBarbero,
   crearBarbero,
   listarBarberosAdmin,
+  reemplazarServiciosDeBarbero,
 } from '../../services/barberosService'
+import { listarServicios } from '../../services/serviciosService'
 import type { BarberoAdminResponse } from '../../types/barbero'
+import type { ServicioResponse } from '../../types/servicio'
 import { BarberosPage } from './BarberosPage'
 
 vi.mock('../../services/barberosService', () => ({
@@ -15,7 +19,20 @@ vi.mock('../../services/barberosService', () => ({
   crearBarbero: vi.fn(),
   listarBarberosActivos: vi.fn(),
   listarBarberosAdmin: vi.fn(),
+  reemplazarServiciosDeBarbero: vi.fn(),
 }))
+
+vi.mock('../../services/serviciosService', () => ({ listarServicios: vi.fn() }))
+
+const servicio: ServicioResponse = {
+  id: 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1',
+  nombre: 'Corte clásico',
+  descripcion: 'Corte sencillo',
+  duracionMin: 30,
+  precio: 25000,
+  imagen: null,
+  activo: true,
+}
 
 const barberoActivo: BarberoAdminResponse = {
   id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -26,6 +43,7 @@ const barberoActivo: BarberoAdminResponse = {
   descripcion: null,
   foto: null,
   activo: true,
+  servicioIds: [],
 }
 
 const barberoInactivo: BarberoAdminResponse = {
@@ -47,7 +65,7 @@ function renderizarPagina() {
   })
   return render(
     <QueryClientProvider client={cliente}>
-      <BarberosPage />
+      <MemoryRouter><BarberosPage /></MemoryRouter>
     </QueryClientProvider>,
   )
 }
@@ -62,6 +80,7 @@ describe('BarberosPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(listarBarberosAdmin).mockResolvedValue([])
+    vi.mocked(listarServicios).mockResolvedValue([])
   })
 
   afterEach(() => {
@@ -77,6 +96,96 @@ describe('BarberosPage', () => {
     expect(screen.getByText('Activo')).toBeInTheDocument()
     expect(screen.getByText('Inactivo')).toBeInTheDocument()
     expect(screen.getByText('Andrés Prueba').closest('li')).toHaveTextContent('+573000000002')
+  })
+
+  it('muestra servicios activos con duración, precio y selección actual', async () => {
+    vi.mocked(listarBarberosAdmin).mockResolvedValue([
+      { ...barberoActivo, servicioIds: [servicio.id] },
+    ])
+    vi.mocked(listarServicios).mockResolvedValue([servicio])
+    renderizarPagina()
+
+    const checkbox = await screen.findByRole('checkbox', { name: /Corte clásico/ })
+    expect(checkbox).toBeChecked()
+    expect(screen.getByText(/30 min.*25\.000/)).toBeInTheDocument()
+  })
+
+  it('permite marcar y desmarcar servicios antes de guardar', async () => {
+    const usuario = userEvent.setup()
+    vi.mocked(listarBarberosAdmin).mockResolvedValue([barberoActivo])
+    vi.mocked(listarServicios).mockResolvedValue([servicio])
+    renderizarPagina()
+
+    const checkbox = await screen.findByRole('checkbox', { name: /Corte clásico/ })
+    const botonGuardar = screen.getByRole('button', { name: 'Guardar servicios' })
+    expect(checkbox).not.toBeChecked()
+    expect(botonGuardar).toBeDisabled()
+
+    await usuario.click(checkbox)
+    expect(checkbox).toBeChecked()
+    expect(botonGuardar).toBeEnabled()
+
+    await usuario.click(checkbox)
+    expect(checkbox).not.toBeChecked()
+    expect(botonGuardar).toBeDisabled()
+  })
+
+  it('guarda las asignaciones y muestra confirmación', async () => {
+    const usuario = userEvent.setup()
+    vi.mocked(listarBarberosAdmin)
+      .mockResolvedValueOnce([barberoActivo])
+      .mockResolvedValue([ { ...barberoActivo, servicioIds: [servicio.id] } ])
+    vi.mocked(listarServicios).mockResolvedValue([servicio])
+    vi.mocked(reemplazarServiciosDeBarbero).mockResolvedValue([servicio])
+    renderizarPagina()
+
+    await usuario.click(await screen.findByRole('checkbox', { name: /Corte clásico/ }))
+    await usuario.click(screen.getByRole('button', { name: 'Guardar servicios' }))
+
+    expect(reemplazarServiciosDeBarbero).toHaveBeenCalledWith(barberoActivo.id, {
+      servicioIds: [servicio.id],
+    })
+    expect(await screen.findByRole('status')).toHaveTextContent('Servicios actualizados')
+  })
+
+  it('muestra codigo de negocio y errores de campo del backend', async () => {
+    const usuario = userEvent.setup()
+    vi.mocked(listarBarberosAdmin).mockResolvedValue([barberoActivo])
+    vi.mocked(listarServicios).mockResolvedValue([servicio])
+    vi.mocked(reemplazarServiciosDeBarbero).mockRejectedValue({
+      status: 409,
+      title: 'Servicio no válido',
+      detail: 'El catálogo cambió; vuelve a intentarlo.',
+      codigo: 'SERVICIO_NO_VALIDO',
+      erroresCampo: { servicioIds: 'Selecciona servicios activos.' },
+    })
+    renderizarPagina()
+
+    await usuario.click(await screen.findByRole('checkbox', { name: /Corte clásico/ }))
+    await usuario.click(screen.getByRole('button', { name: 'Guardar servicios' }))
+
+    expect(await screen.findByText('Código: SERVICIO_NO_VALIDO')).toBeInTheDocument()
+    expect(screen.getByText('servicioIds: Selecciona servicios activos.')).toBeInTheDocument()
+  })
+
+  it('enlaza al catálogo cuando no hay servicios activos', async () => {
+    vi.mocked(listarBarberosAdmin).mockResolvedValue([barberoActivo])
+    vi.mocked(listarServicios).mockResolvedValue([])
+    renderizarPagina()
+
+    expect(await screen.findByText('No hay servicios activos.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Administrar catálogo' })).toHaveAttribute(
+      'href', '/panel/servicios',
+    )
+  })
+
+  it('explica cuándo un barbero no tiene servicios asignados', async () => {
+    vi.mocked(listarBarberosAdmin).mockResolvedValue([barberoActivo])
+    vi.mocked(listarServicios).mockResolvedValue([servicio])
+    renderizarPagina()
+
+    expect(await screen.findByText('Aún no ofrece servicios; no aparecerá para reservar.'))
+      .toBeInTheDocument()
   })
 
   it('crea una cuenta y perfil con el celular compuesto', async () => {

@@ -29,7 +29,7 @@ Decisiones que ya se conocen y merecen un ADR al implementarse:
 - [ADR-0001: UUID en identidades y perfiles](ADR-0001-uuid-en-identidades.md) — aceptado para
   `usuario`, `sesion_refresco` y `barbero`; no define el ID del catálogo de servicios.
 - [ADR-0002: asignación barbero-servicio y consulta de citas futuras](ADR-0002-asignacion-barbero-servicio-y-consulta-citas.md)
-  — propuesta que requiere validar los contratos del catálogo y del módulo de citas.
+  — relación implementada; integración con disponibilidad y consulta de citas pendientes.
 
 ## Qué NO va aquí
 

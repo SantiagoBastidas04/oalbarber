@@ -1,5 +1,6 @@
 package com.oalbarber.api.modules.barbero.dto;
 
+import java.util.List;
 import java.util.UUID;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -30,5 +31,8 @@ public record BarberoAdminResponse(
         String foto,
 
         @Schema(description = "Estado del perfil")
-        boolean activo) {
+        boolean activo,
+
+        @Schema(description = "Identificadores de los servicios asignados al perfil")
+        List<UUID> servicioIds) {
 }

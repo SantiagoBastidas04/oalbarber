@@ -4,6 +4,7 @@ import {
   crearBarbero,
   listarBarberosActivos,
   listarBarberosAdmin,
+  reemplazarServiciosDeBarbero,
 } from '../services/barberosService'
 import type { BarberoRequest } from '../types/barbero'
 
@@ -57,6 +58,19 @@ export function useCambiarEstadoBarbero() {
         queryClient.invalidateQueries({ queryKey: clavesBarberos.publicos }),
         queryClient.invalidateQueries({ queryKey: clavesBarberos.admin }),
       ])
+    },
+  })
+}
+
+/** Guarda las asignaciones y actualiza el listado administrativo compartido. */
+export function useGuardarServiciosBarbero() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, servicioIds }: { id: string; servicioIds: string[] }) =>
+      reemplazarServiciosDeBarbero(id, { servicioIds }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: clavesBarberos.todos })
     },
   })
 }

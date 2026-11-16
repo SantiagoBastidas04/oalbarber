@@ -15,6 +15,7 @@ interface ProblemDetail {
   type?: string
   title?: string
   detail?: string
+  codigo?: string
   instance?: string
   codigo?: string
   errors?: Record<string, string>
@@ -50,6 +51,7 @@ export function normalizarError(error: unknown): ApiError {
         datos?.detail ??
         MENSAJES_POR_ESTADO[respuesta.status] ??
         'Ocurrió un error inesperado. Intenta de nuevo.',
+      codigo: datos?.codigo,
       type: datos?.type,
       instance: datos?.instance,
       codigo: datos?.codigo,

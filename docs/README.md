@@ -11,6 +11,7 @@ documentación en el mismo Pull Request.
 | `arquitectura/` | Diagramas y descripción del monolito modular, módulos, flujos e infraestructura. |
 | `api/` | Documentación de la API REST, convenciones de endpoints y errores. |
 | `decisiones/` | Registros de decisiones de arquitectura (ADR). |
+| `seguimiento/` | Matrices de trazabilidad y estado de criterios de historias. |
 
 ## Qué NO va aquí
 

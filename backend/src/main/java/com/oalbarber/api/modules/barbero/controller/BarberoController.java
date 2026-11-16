@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,8 +19,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.oalbarber.api.modules.barbero.dto.BarberoAdminResponse;
 import com.oalbarber.api.modules.barbero.dto.BarberoPublicoResponse;
 import com.oalbarber.api.modules.barbero.dto.BarberoRequest;
+import com.oalbarber.api.modules.barbero.dto.BarberoServiciosRequest;
 import com.oalbarber.api.modules.barbero.dto.CambiarEstadoBarberoRequest;
 import com.oalbarber.api.modules.barbero.service.BarberoService;
+import com.oalbarber.api.modules.servicio.dto.ServicioResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -114,5 +117,47 @@ public class BarberoController {
             @Parameter(description = "UUID del perfil") @PathVariable UUID id,
             @Valid @RequestBody CambiarEstadoBarberoRequest solicitud) {
         return barberoService.cambiarEstado(id, solicitud.activo());
+    }
+
+    /** Lista servicios asignados a un perfil activo sin datos personales del barbero. */
+    @Operation(summary = "Listar servicios de un barbero activo",
+            description = "Endpoint público. Devuelve solo servicios activos asignados al perfil. "
+                    + "Responde 404 si el perfil no existe o está inactivo.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Servicios activos asignados"),
+            @ApiResponse(responseCode = "404", description = "Perfil inexistente o inactivo",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @GetMapping("/{id}/servicios")
+    public List<ServicioResponse> listarServiciosPublicos(@PathVariable UUID id) {
+        return barberoService.listarServiciosPublicosDe(id);
+    }
+
+    /** Reemplaza las asignaciones. El aviso por citas futuras queda pendiente del módulo cita. */
+    @Operation(summary = "Reemplazar servicios de un barbero",
+            description = "Solo ADMINISTRADOR. La lista puede estar vacía para quitar todos los "
+                    + "servicios; todos los UUID deben identificar servicios activos. "
+                    + "Limitación de H-13: todavía no se consulta si quitar un servicio afecta "
+                    + "citas futuras (criterio 4), porque el módulo cita no existe.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Asignaciones actualizadas"),
+            @ApiResponse(responseCode = "400", description = "Lista ausente, nula o con UUIDs duplicados",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "Se requiere autenticación",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Se requiere rol ADMINISTRADOR",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404", description = "No existe el perfil indicado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "Hay UUIDs que no son servicios activos",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PutMapping("/{id}/servicios")
+    public List<ServicioResponse> reemplazarServicios(
+            @Parameter(description = "UUID del perfil") @PathVariable UUID id,
+            @Valid @RequestBody BarberoServiciosRequest solicitud) {
+        return barberoService.reemplazarServicios(id, solicitud.servicioIds());
     }
 }

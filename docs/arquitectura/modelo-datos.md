@@ -1,14 +1,15 @@
 # Modelo de datos OalBarber
 
-**Estado:** esquema implementado para cuentas, catálogo y perfiles; la relación barbero-servicio,
-agenda y citas aún no están implementadas. El SRS vigente se conserva sin cambios.
+**Estado:** modelo de cuentas, catálogo, perfiles y asignaciones implementado en V1–V5; horarios,
+bloqueos y citas siguen pendientes. **Última revisión:** 2026-11-15. El SRS se conserva sin cambios.
 
-## Estado implementado
+## Tablas implementadas
 
-Las migraciones actuales crean `usuario` (V1), `sesion_refresco` (V2), `servicio` (V3) y
-`barbero` (V4). Las tablas `usuario`, `sesion_refresco` y `barbero` usan UUID. V4 crea únicamente
-`barbero`, con `usuario_id` único, FK a `usuario(id)` y `ON DELETE RESTRICT`; no contiene
-referencias a servicios ni citas. V4 sigue la migración V3 ya asignada al catálogo.
+Las migraciones crean `usuario` (V1), `sesion_refresco` (V2), `servicio` (V3), `barbero` (V4) y
+`barbero_servicio` (V5). Los identificadores de estas tablas son UUID. V4 crea únicamente
+`barbero`, con `usuario_id` único, FK a `usuario(id)` y `ON DELETE RESTRICT`. V5 enlaza barbero y
+servicio con una clave primaria compuesta, dos FKs con `ON DELETE RESTRICT`, `creado_en` y un
+índice para `servicio_id`.
 
 ```mermaid
 erDiagram
@@ -36,6 +37,16 @@ erDiagram
         uuid reemplazado_por_id FK
     }
 
+    servicio {
+        uuid id PK
+        varchar nombre UK
+        text descripcion
+        integer duracion_min
+        numeric precio "12,2"
+        varchar imagen
+        boolean activo
+    }
+
     barbero {
         uuid id PK
         uuid usuario_id FK, UK
@@ -45,73 +56,78 @@ erDiagram
         boolean activo
     }
 
+    barbero_servicio {
+        uuid barbero_id PK, FK
+        uuid servicio_id PK, FK
+        timestamptz creado_en
+    }
+
     usuario ||--o{ sesion_refresco : "sesiones"
     sesion_refresco o|--o| sesion_refresco : "reemplaza"
     usuario ||--o| barbero : "perfil profesional"
+    barbero ||--o{ barbero_servicio : "ofrece"
+    servicio ||--o{ barbero_servicio : "asignado a"
 ```
 
 `barbero` es un perfil separado de la identidad. El nombre, celular y credenciales permanecen en
-`usuario`; el perfil guarda presentación pública y estado profesional. El inicializador asegura
-un perfil para el administrador inicial. Cambiar `barbero.activo` no cambia `usuario.activo` ni
-revoca sus sesiones.
+`usuario`; el perfil guarda presentación pública y estado profesional. El inicializador asegura un
+perfil para el administrador inicial. Cambiar `barbero.activo` no cambia `usuario.activo` ni revoca
+sus sesiones.
 
-## Entidades conceptuales no implementadas
+`barbero_servicio` representa las asignaciones y pertenece al módulo `barbero`. El módulo consulta
+el catálogo a través de `ServicioService`, valida que los servicios estén activos y permite una
+lista vacía. Un perfil nuevo comienza sin servicios asignados; el administrador los configura en
+`/panel/barberos`.
 
-El siguiente modelo conceptual resume entidades descritas por el SRS; no implica que existan sus
-migraciones, entidades o endpoints. El tipo y nombre de tabla de `servicio` deben verificarse en su
-implementación antes de integrar la relación.
+## Entidades pendientes
+
+El siguiente diagrama muestra entidades del SRS que aún no tienen migración ni implementación.
+No representa capacidades disponibles.
 
 ```mermaid
 erDiagram
-    barbero ||--o{ barbero_servicio : "asignación futura"
-    servicio ||--o{ barbero_servicio : "asignación futura"
-    barbero ||--o{ horario_atencion : "agenda futura"
-    barbero ||--o{ bloqueo : "bloqueos futuros"
+    barbero ||--o{ horario_atencion : "horario futuro"
+    barbero ||--o{ bloqueo : "bloqueo futuro"
     usuario ||--o{ cita : "cliente futuro"
     barbero ||--o{ cita : "barbero futuro"
     servicio ||--o{ cita : "servicio futuro"
 
-    barbero_servicio {
-        uuid barbero_id PK, FK
-        unknown servicio_id PK, FK
-        timestamptz creado_en
-    }
-    servicio {
-        unknown id PK
-    }
     horario_atencion {
-        unknown id PK
+        uuid id PK
         uuid barbero_id FK
     }
     bloqueo {
-        unknown id PK
+        uuid id PK
         uuid barbero_id FK
     }
     cita {
-        unknown id PK
+        uuid id PK
         uuid cliente_id FK
         uuid barbero_id FK
-        unknown servicio_id FK
+        uuid servicio_id FK
     }
 ```
 
-La relación barbero-servicio se prevé muchos a muchos mediante clave compuesta, pero su
-implementación y el tipo de `servicio_id` dependen del esquema real del catálogo. La consulta de
-citas futuras se propone a través de `ConsultaCitasFuturas`; su integración y firma concreta
-requieren acordarse con el módulo de citas. No se deben presentar estas capacidades como
-funcionalidad disponible.
+La integración de las asignaciones con disponibilidad y la consulta de citas futuras está
+pendiente del módulo `cita`. El diseño propuesto usa un puerto propiedad de `barbero` e
+implementado por `cita`, para evitar dependencia circular. Detalle y estado de los criterios en la
+[matriz H-13](../seguimiento/trazabilidad-H-13.md) y en el
+[ADR-0002](../decisiones/ADR-0002-asignacion-barbero-servicio-y-consulta-citas.md).
 
-## Reglas confirmadas para las tablas implementadas
+## Reglas confirmadas
 
 - `usuario.celular` es único y `usuario.contrasena_hash` almacena el hash, no la contraseña.
 - `usuario.rol` admite `CLIENTE`, `BARBERO` y `ADMINISTRADOR`.
 - `barbero.usuario_id` es único y su FK usa `ON DELETE RESTRICT`.
 - Las cuentas de barbero y perfil se crean desde el flujo administrativo; los perfiles no se
   insertan mediante una migración.
+- `barbero_servicio` evita pares duplicados y restringe el borrado de los registros referenciados.
 - El DTO público de barbero solo lista perfiles activos y no incluye nombre ni celular de la
-  cuenta. El DTO administrativo sí incluye esos campos y está restringido a administradores.
+  cuenta. El DTO administrativo incluye esos campos y `servicioIds`, y está restringido a
+  administradores.
 
 ## Conteo y SRS
 
-El SRS adjunto mantiene su conteo de ocho tablas. El modelo conceptual de nueve tablas incluye
-`barbero` y `barbero_servicio`; cualquier ajuste al SRS requiere aprobación. El SRS se deja intacto.
+El SRS adjunto mantiene su conteo y no se modifica en esta entrega. El esquema actualmente
+implementado corresponde a V1–V5; las tablas restantes descritas por el SRS se mantienen como
+trabajo pendiente hasta que existan los módulos respectivos.

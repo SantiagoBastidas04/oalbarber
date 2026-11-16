@@ -7,6 +7,7 @@ import {
   crearBarbero,
   listarBarberosActivos,
   listarBarberosAdmin,
+  reemplazarServiciosDeBarbero,
 } from '../services/barberosService'
 import type {
   BarberoAdminResponse,
@@ -19,6 +20,7 @@ import {
   useBarberosAdmin,
   useCambiarEstadoBarbero,
   useCrearBarbero,
+  useGuardarServiciosBarbero,
 } from './useBarberos'
 
 vi.mock('../services/barberosService', () => ({
@@ -26,6 +28,7 @@ vi.mock('../services/barberosService', () => ({
   crearBarbero: vi.fn(),
   listarBarberosActivos: vi.fn(),
   listarBarberosAdmin: vi.fn(),
+  reemplazarServiciosDeBarbero: vi.fn(),
 }))
 
 const publico: BarberoPublicoResponse = {
@@ -37,10 +40,15 @@ const publico: BarberoPublicoResponse = {
 }
 
 const admin: BarberoAdminResponse = {
-  ...publico,
+  id: publico.id,
+  nombrePublico: publico.nombrePublico,
+  descripcion: publico.descripcion,
+  foto: publico.foto,
+  activo: publico.activo,
   usuarioId: '11111111-1111-4111-8111-111111111111',
   nombre: 'Cuenta ficticia',
   celular: '+573000000001',
+  servicioIds: [],
 }
 
 function nuevoCliente() {
@@ -114,6 +122,26 @@ describe('hooks de barberos', () => {
     })
 
     expect(cambiarEstadoBarbero).toHaveBeenCalledWith(admin.id, { activo: false })
+    expect(cliente.getQueryState(clavesBarberos.publicos)?.isInvalidated).toBe(true)
+    expect(cliente.getQueryState(clavesBarberos.admin)?.isInvalidated).toBe(true)
+  })
+
+  it('al guardar servicios invalida los listados público y administrativo', async () => {
+    vi.mocked(reemplazarServiciosDeBarbero).mockResolvedValue([])
+    const cliente = nuevoCliente()
+    cliente.setQueryData(clavesBarberos.publicos, [publico])
+    cliente.setQueryData(clavesBarberos.admin, [admin])
+    const { result } = renderHook(() => useGuardarServiciosBarbero(), {
+      wrapper: envolver(cliente),
+    })
+
+    await act(async () => {
+      await result.current.mutateAsync({ id: admin.id, servicioIds: ['bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'] })
+    })
+
+    expect(reemplazarServiciosDeBarbero).toHaveBeenCalledWith(admin.id, {
+      servicioIds: ['bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'],
+    })
     expect(cliente.getQueryState(clavesBarberos.publicos)?.isInvalidated).toBe(true)
     expect(cliente.getQueryState(clavesBarberos.admin)?.isInvalidated).toBe(true)
   })

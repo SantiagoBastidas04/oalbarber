@@ -3,8 +3,10 @@ import type {
   BarberoAdminResponse,
   BarberoPublicoResponse,
   BarberoRequest,
+  BarberoServiciosRequest,
   CambiarEstadoBarberoRequest,
 } from '../types/barbero'
+import type { ServicioResponse } from '../types/servicio'
 
 /** RF-10: consulta pública de perfiles activos, sin datos personales de cuenta. */
 export async function listarBarberosActivos(): Promise<BarberoPublicoResponse[]> {
@@ -33,6 +35,24 @@ export async function cambiarEstadoBarbero(
 ): Promise<BarberoAdminResponse> {
   const { data } = await apiClient.patch<BarberoAdminResponse>(
     `/barberos/${id}/estado`,
+    solicitud,
+  )
+  return data
+}
+
+/** Servicios activos asignados a un perfil público activo. */
+export async function listarServiciosDeBarbero(id: string): Promise<ServicioResponse[]> {
+  const { data } = await apiClient.get<ServicioResponse[]>(`/barberos/${id}/servicios`)
+  return data
+}
+
+/** Reemplaza todas las asignaciones activas de un perfil; solo ADMINISTRADOR. */
+export async function reemplazarServiciosDeBarbero(
+  id: string,
+  solicitud: BarberoServiciosRequest,
+): Promise<ServicioResponse[]> {
+  const { data } = await apiClient.put<ServicioResponse[]>(
+    `/barberos/${id}/servicios`,
     solicitud,
   )
   return data

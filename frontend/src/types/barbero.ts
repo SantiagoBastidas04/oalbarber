@@ -9,6 +9,11 @@ export interface BarberoPublicoResponse {
   activo: boolean
 }
 
+/** Reemplazo completo de las asignaciones activas de un perfil. */
+export interface BarberoServiciosRequest {
+  servicioIds: string[]
+}
+
 /** Perfil y datos de cuenta que solo devuelve el endpoint administrativo. */
 export interface BarberoAdminResponse {
   id: string
@@ -19,6 +24,8 @@ export interface BarberoAdminResponse {
   descripcion: string | null
   foto: string | null
   activo: boolean
+  /** UUIDs de servicios asignados; incluye asignaciones a servicios inactivos. */
+  servicioIds: string[]
 }
 
 /** Datos de alta; el rol BARBERO lo asigna el backend. */

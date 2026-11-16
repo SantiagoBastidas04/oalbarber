@@ -1,40 +1,58 @@
 # ADR-0002: Asignación barbero-servicio y consulta de citas futuras
 
 - **Fecha:** 2026-11-15
-- **Estado:** propuesto; requiere confirmar los contratos del catálogo y de citas
+- **Estado:** aceptado parcialmente; la relación barbero-servicio está implementada y la integración con citas sigue pendiente
+- **Última revisión:** 2026-11-15
 
 ## Contexto
 
-La aplicación necesita expresar qué servicios ofrece cada perfil y consultar citas futuras que
-podrían verse afectadas por cambios de disponibilidad o asignaciones. El esquema y la interfaz
-del catálogo, así como el módulo de citas, deben revisarse antes de concretar estas relaciones.
+La aplicación necesita expresar qué servicios ofrece cada perfil y, al quitar una asignación,
+consultar si hay citas futuras que puedan verse afectadas. El catálogo ya implementa servicios con
+UUID y el módulo `barbero` puede administrar sus asignaciones. El módulo `cita` y el cálculo de
+disponibilidad todavía no están disponibles en esta rama.
 
-## Propuesta
+## Decisión
 
-- Modelar la asignación como relación muchos a muchos mediante `barbero_servicio`, con clave
-  compuesta por `barbero_id` y `servicio_id`.
-- Mantener las consultas de citas detrás del puerto `ConsultaCitasFuturas`, consumido por el
-  módulo `barbero`, con la operación propuesta
-  `contarCitasFuturasConfirmadas(UUID barberoId, <tipoIdServicio> servicioId)`. No depender de
-  controladores ni repositorios internos de `cita`.
-- Determinar tipo de `servicio_id`, nombre real de tabla y firma del servicio/puerto después de
-  inspeccionar el catálogo y el diseño real de citas.
+- Representar la asignación mediante `barbero_servicio`, con clave compuesta
+  `(barbero_id, servicio_id)`, UUID en ambas columnas, claves foráneas y borrado restringido.
+- Validar y listar los servicios mediante `ServicioService`; el módulo `barbero` no accede al
+  repositorio de `servicio`.
+- Dejar la consulta de citas futuras detrás de un puerto propiedad de `barbero`. Cuando exista el
+  módulo `cita`, este implementará ese puerto y consultará sus propios datos, evitando una
+  dependencia circular entre módulos.
 
-Esta propuesta aún no define migraciones, endpoints ni selección de servicios en la interfaz.
+## Estado implementado
+
+La relación está creada por V5. `BarberoService` lista servicios activos asignados, reemplaza la
+lista de asignaciones en una transacción y ofrece operaciones para consultar perfiles activos que
+ofrecen un servicio. La API y `/panel/barberos` permiten consultar y modificar esas asignaciones.
+
+## Pendiente
+
+- **Criterio 3 de H-13:** integrar las operaciones de `BarberoService` con la selección de barbero
+  y la validación de disponibilidad dentro del módulo `cita`.
+- **Criterio 4 de H-13:** antes de quitar una asignación, consultar las citas futuras afectadas y
+  devolver al panel la información necesaria para pedir confirmación. No cancelar ni mover citas
+  automáticamente.
+
+Cuando exista `cita`, se propone declarar en `barbero` un puerto como
+`ConsultaCitasFuturas` y hacer que `cita` lo implemente. Su firma deberá usar los tipos reales del
+módulo y comunicar las citas confirmadas futuras afectadas por `(barberoId, servicioId)`. No se
+implementan todavía el puerto, la confirmación ni los errores asociados.
 
 ## Alternativas consideradas
 
-- Guardar IDs de servicios como una lista serializada en `barbero`: dificulta integridad
-  referencial y consultas inversas.
-- Hacer que `barbero` acceda directamente al repositorio de `cita`: acopla módulos y cruza
-  propiedad de datos.
-- Decidir ahora el tipo/FK de servicio: arriesga incompatibilidad con el esquema del catálogo, que
-  aún debe revisarse.
+- Guardar IDs como una lista serializada en `barbero`: se descarta porque elimina la integridad
+  referencial y dificulta las consultas inversas.
+- Hacer que `barbero` acceda directamente al repositorio de `cita`: se descarta porque acopla
+  módulos y cruza la propiedad de los datos.
+- Hacer que `cita` dependa de implementaciones internas de `barbero`: se descarta; `cita` debe
+  depender de contratos y los módulos no deben formar una dependencia circular.
 
-## Consecuencias y trabajo pendiente
+## Consecuencias
 
-- Si se acepta, la tabla puente requerirá dos FKs y una migración coordinada con el catálogo.
-- Revisar el tipo de ID, nombre de tabla y firma de `ServicioService` antes de integrar el catálogo.
-- Acordar con citas el contrato de consulta futura antes de implementar la lógica dependiente.
-- Reemplazar este ADR por otro aceptado cuando se confirme el diseño; hasta entonces no se
-  considera una decisión de implementación.
+- La clave compuesta impide duplicar una asignación y las claves foráneas protegen ambos perfiles
+  de datos.
+- El catálogo debe seguir consultándose mediante su service.
+- H-13 no se puede cerrar mientras los criterios 3 y 4 sigan pendientes; ver la
+  [matriz de trazabilidad](../seguimiento/trazabilidad-H-13.md).

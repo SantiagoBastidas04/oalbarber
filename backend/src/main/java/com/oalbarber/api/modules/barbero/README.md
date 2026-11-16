@@ -4,7 +4,7 @@ Paquete raíz: `com.oalbarber.api.modules.barbero`.
 
 ## Responsabilidad
 
-Perfil profesional enlazado a una cuenta de `usuario` con rol `BARBERO` o `ADMINISTRADOR`. El sistema no presupone una cantidad fija de barberos.
+Perfil profesional enlazado a una cuenta de `usuario` con rol `BARBERO` o `ADMINISTRADOR`. El sistema no presupone una cantidad fija de barberos. Cada perfil puede tener cero o más servicios activos asignados.
 
 ## Subcarpetas
 
@@ -37,6 +37,19 @@ Perfil profesional enlazado a una cuenta de `usuario` con rol `BARBERO` o `ADMIN
 
 `BarberoService` crea la cuenta `BARBERO` mediante `UsuarioService` y luego su perfil en la misma transacción. `AdminInicializador` asegura el perfil del administrador inicial después de crear o localizar su cuenta; no altera cuentas existentes con otro rol. El DTO público omite el nombre y celular de la cuenta. Desactivar un perfil no desactiva la cuenta de usuario.
 
+La tabla puente `barbero_servicio` se administra desde este módulo mediante clave compuesta y
+FKs con `ON DELETE RESTRICT`. El catálogo se consulta solo a través de `ServicioService`; no se
+usa el repositorio de `servicio`. Un barbero nuevo empieza sin asignaciones. El endpoint público
+`GET /api/barberos/{id}/servicios` devuelve servicios activos solo para perfiles activos. El
+endpoint administrativo `PUT /api/barberos/{id}/servicios` reemplaza la lista completa y permite
+quitar todos los servicios con una lista vacía. `GET /api/barberos/admin` devuelve `servicioIds`
+para todos los perfiles.
+
+`listarActivosQueOfrecenServicio` y `ofreceServicio` cubren la consulta del lado `barbero` para
+disponibilidad. Su integración en el flujo de reserva, junto con el aviso por citas futuras antes
+de quitar una asignación, sigue pendiente de que exista el módulo `cita`. El diseño previsto está
+en [ADR-0002](../../../../../../../../../docs/decisiones/ADR-0002-asignacion-barbero-servicio-y-consulta-citas.md).
+
 ## Requisitos del SRS
 
-RF-10, RN-01, RN-12
+RF-10, H-13, RN-01, RN-12

@@ -26,6 +26,7 @@ class BarberoMigracionTest {
 
     private static final String SQL_STATE_UNIQUE = "23505";
     private static final String SQL_STATE_FOREIGN_KEY = "23503";
+    private static final String SQL_STATE_RESTRICT = "r";
 
     @Container
     private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(
@@ -38,13 +39,13 @@ class BarberoMigracionTest {
                 .locations("classpath:db/migration")
                 .load();
 
-        assertEquals(4, flyway.migrate().migrationsExecuted,
-                "La base vacía debe aplicar V1, V2, V3 y V4");
-        assertEquals(List.of("1", "2", "3", "4"),
+        assertEquals(5, flyway.migrate().migrationsExecuted,
+                "La base vacía debe aplicar V1, V2, V3, V4 y V5");
+        assertEquals(List.of("1", "2", "3", "4", "5"),
                 Arrays.stream(flyway.info().applied())
                         .map(migracion -> migracion.getVersion().getVersion())
                         .toList(),
-                "Flyway debe aplicar la secuencia V1 a V4");
+                "Flyway debe aplicar la secuencia V1 a V5");
     }
 
     @Test
@@ -65,7 +66,7 @@ class BarberoMigracionTest {
                 UUID.fromString("cccccccc-cccc-4ccc-8ccc-cccccccccccc"),
                 UUID.fromString("33333333-3333-4333-8333-333333333333")));
 
-        assertEquals('r', tipoDeEliminacionDeLaClaveForanea(),
+        assertEquals(SQL_STATE_RESTRICT, tipoDeEliminacionDeClaveForanea("fk_barbero_usuario"),
                 "La FK debe declarar ON DELETE RESTRICT");
         assertSqlState(SQL_STATE_FOREIGN_KEY, () -> eliminarUsuario(usuarioId));
         assertTrue(estadoActivoDelBarbero(barberoId),
@@ -74,6 +75,35 @@ class BarberoMigracionTest {
         // El segundo usuario permanece sin perfil, confirmando que la restricción
         // no impide tener usuarios que todavía no son barberos.
         assertEquals(0, cantidadDeBarberosPara(segundoUsuarioId));
+    }
+
+    @Test
+    void relacionBarberoServicioExigeParUnicoYRestringeAmbasEliminaciones() throws Exception {
+        UUID usuarioId = UUID.fromString("44444444-4444-4444-8444-444444444444");
+        UUID barberoId = UUID.fromString("dddddddd-dddd-4ddd-8ddd-dddddddddddd");
+        UUID servicioId = UUID.fromString("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee");
+        UUID servicioInexistenteId = UUID.fromString("ffffffff-ffff-4fff-8fff-ffffffffffff");
+        UUID barberoInexistenteId = UUID.fromString("99999999-9999-4999-8999-999999999999");
+
+        insertarUsuario(usuarioId, "+573000000004");
+        insertarBarbero(barberoId, usuarioId);
+        insertarServicio(servicioId, "Servicio de prueba migracion");
+        insertarBarberoServicio(barberoId, servicioId);
+
+        assertTrue(tieneFechaCreacion(barberoId, servicioId),
+                "creado_en debe completarse con el valor por defecto");
+        assertSqlState(SQL_STATE_UNIQUE, () -> insertarBarberoServicio(barberoId, servicioId));
+        assertSqlState(SQL_STATE_FOREIGN_KEY,
+                () -> insertarBarberoServicio(barberoInexistenteId, servicioId));
+        assertSqlState(SQL_STATE_FOREIGN_KEY,
+                () -> insertarBarberoServicio(barberoId, servicioInexistenteId));
+
+        assertEquals(SQL_STATE_RESTRICT, tipoDeEliminacionDeClaveForanea(
+                "fk_barbero_servicio_barbero"));
+        assertEquals(SQL_STATE_RESTRICT, tipoDeEliminacionDeClaveForanea(
+                "fk_barbero_servicio_servicio"));
+        assertSqlState(SQL_STATE_FOREIGN_KEY, () -> eliminarBarbero(barberoId));
+        assertSqlState(SQL_STATE_FOREIGN_KEY, () -> eliminarServicio(servicioId));
     }
 
     private static void insertarUsuario(UUID id, String celular) throws SQLException {
@@ -87,8 +117,28 @@ class BarberoMigracionTest {
         ejecutar("INSERT INTO barbero (id, usuario_id) VALUES (?, ?)", id, usuarioId);
     }
 
+    private static void insertarServicio(UUID id, String nombre) throws SQLException {
+        ejecutar("""
+                INSERT INTO servicio (id, nombre, duracion_min, precio)
+                VALUES (?, ?, 40, 15000.00)
+                """, id, nombre);
+    }
+
+    private static void insertarBarberoServicio(UUID barberoId, UUID servicioId) throws SQLException {
+        ejecutar("INSERT INTO barbero_servicio (barbero_id, servicio_id) VALUES (?, ?)",
+                barberoId, servicioId);
+    }
+
     private static void eliminarUsuario(UUID id) throws SQLException {
         ejecutar("DELETE FROM usuario WHERE id = ?", id);
+    }
+
+    private static void eliminarBarbero(UUID id) throws SQLException {
+        ejecutar("DELETE FROM barbero WHERE id = ?", id);
+    }
+
+    private static void eliminarServicio(UUID id) throws SQLException {
+        ejecutar("DELETE FROM servicio WHERE id = ?", id);
     }
 
     private static int cantidadDeBarberosPara(UUID usuarioId) throws SQLException {
@@ -117,18 +167,38 @@ class BarberoMigracionTest {
         }
     }
 
-    private static char tipoDeEliminacionDeLaClaveForanea() throws SQLException {
+    private static boolean tieneFechaCreacion(UUID barberoId, UUID servicioId) throws SQLException {
+        try (Connection conexion = conexion();
+             PreparedStatement consulta = conexion.prepareStatement("""
+                     SELECT creado_en IS NOT NULL
+                     FROM barbero_servicio
+                     WHERE barbero_id = ? AND servicio_id = ?
+                     """)) {
+            consulta.setObject(1, barberoId);
+            consulta.setObject(2, servicioId);
+            try (ResultSet resultado = consulta.executeQuery()) {
+                if (!resultado.next()) {
+                    throw new AssertionError("No se encontró la asignación barbero-servicio esperada");
+                }
+                return resultado.getBoolean(1);
+            }
+        }
+    }
+
+    private static String tipoDeEliminacionDeClaveForanea(String nombre) throws SQLException {
         try (Connection conexion = conexion();
              PreparedStatement consulta = conexion.prepareStatement("""
                      SELECT confdeltype
                      FROM pg_constraint
-                     WHERE conname = 'fk_barbero_usuario'
-                     """);
-             ResultSet resultado = consulta.executeQuery()) {
-            if (!resultado.next()) {
-                throw new AssertionError("No se encontró la FK fk_barbero_usuario");
+                     WHERE conname = ?
+                     """)) {
+            consulta.setString(1, nombre);
+            try (ResultSet resultado = consulta.executeQuery()) {
+                if (!resultado.next()) {
+                    throw new AssertionError("No se encontró la FK " + nombre);
+                }
+                return resultado.getString(1);
             }
-            return resultado.getString(1).charAt(0);
         }
     }
 

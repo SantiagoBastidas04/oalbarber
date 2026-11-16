@@ -2,12 +2,14 @@ package com.oalbarber.api;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -30,12 +32,14 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import com.oalbarber.api.common.exception.GlobalExceptionHandler;
 import com.oalbarber.api.common.exception.RecursoDuplicadoException;
 import com.oalbarber.api.common.exception.RecursoNoEncontradoException;
+import com.oalbarber.api.common.exception.ReglaNegocioException;
 import com.oalbarber.api.config.SecurityConfig;
 import com.oalbarber.api.modules.auth.service.TokenServicio;
 import com.oalbarber.api.modules.barbero.controller.BarberoController;
 import com.oalbarber.api.modules.barbero.dto.BarberoAdminResponse;
 import com.oalbarber.api.modules.barbero.dto.BarberoPublicoResponse;
 import com.oalbarber.api.modules.barbero.service.BarberoService;
+import com.oalbarber.api.modules.servicio.dto.ServicioResponse;
 
 @Import({SecurityConfig.class, GlobalExceptionHandler.class,
         BarberoControllerTest.SeguridadTestConfig.class})
@@ -46,6 +50,8 @@ class BarberoControllerTest {
             UUID.fromString("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
     private static final UUID USUARIO_ID =
             UUID.fromString("11111111-1111-4111-8111-111111111111");
+    private static final UUID SERVICIO_ID =
+            UUID.fromString("cccccccc-cccc-4ccc-8ccc-ccccccccccc1");
 
     @Autowired
     private MockMvc mockMvc;
@@ -90,7 +96,8 @@ class BarberoControllerTest {
                 .andExpect(status().isForbidden());
         mockMvc.perform(conAutenticacion(get("/api/barberos/admin"), "ADMINISTRADOR"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].celular").value("+573000000001"));
+                .andExpect(jsonPath("$[0].celular").value("+573000000001"))
+                .andExpect(jsonPath("$[0].servicioIds").isArray());
     }
 
     @Test
@@ -182,6 +189,87 @@ class BarberoControllerTest {
                 .andExpect(jsonPath("$.codigo").value("VALIDACION"));
     }
 
+    @Test
+    void listadoPublicoDeServiciosSoloAdmitePerfilesActivos() throws Exception {
+        when(barberoService.listarServiciosPublicosDe(PERFIL_ID))
+                .thenReturn(List.of(servicio()));
+
+        mockMvc.perform(get("/api/barberos/{id}/servicios", PERFIL_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(SERVICIO_ID.toString()))
+                .andExpect(jsonPath("$[0].nombre").value("Corte ficticio"));
+
+        when(barberoService.listarServiciosPublicosDe(PERFIL_ID))
+                .thenThrow(new RecursoNoEncontradoException(
+                        "No existe el perfil de barbero indicado."));
+        mockMvc.perform(get("/api/barberos/{id}/servicios", PERFIL_ID))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void reemplazoDeServiciosEsSoloAdministradorYDevuelveListaActualizada() throws Exception {
+        when(barberoService.reemplazarServicios(PERFIL_ID, List.of(SERVICIO_ID)))
+                .thenReturn(List.of(servicio()));
+        String cuerpo = """
+                {"servicioIds":["%s"]}
+                """.formatted(SERVICIO_ID);
+
+        mockMvc.perform(put("/api/barberos/{id}/servicios", PERFIL_ID)
+                        .contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(conAutenticacion(put("/api/barberos/{id}/servicios", PERFIL_ID), "CLIENTE")
+                        .contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(conAutenticacion(put("/api/barberos/{id}/servicios", PERFIL_ID), "BARBERO")
+                        .contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(conAutenticacion(put("/api/barberos/{id}/servicios", PERFIL_ID),
+                        "ADMINISTRADOR")
+                        .contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(SERVICIO_ID.toString()));
+
+        verify(barberoService).reemplazarServicios(PERFIL_ID, List.of(SERVICIO_ID));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void reemplazoConListaNulaODuplicadaDevuelve400SinInvocarServicio() throws Exception {
+        mockMvc.perform(put("/api/barberos/{id}/servicios", PERFIL_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"servicioIds\":null}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value("VALIDACION"));
+
+        mockMvc.perform(put("/api/barberos/{id}/servicios", PERFIL_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"servicioIds\":[\"" + SERVICIO_ID + "\",\"" + SERVICIO_ID + "\"]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value("VALIDACION"));
+
+        verifyNoInteractions(barberoService);
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void reemplazoDevuelve404ParaBarberoAusenteY409ParaServicioNoValido() throws Exception {
+        when(barberoService.reemplazarServicios(PERFIL_ID, List.of(SERVICIO_ID)))
+                .thenThrow(new RecursoNoEncontradoException("No existe el perfil de barbero indicado."));
+        String cuerpo = "{\"servicioIds\":[\"" + SERVICIO_ID + "\"]}";
+
+        mockMvc.perform(put("/api/barberos/{id}/servicios", PERFIL_ID)
+                        .contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+                .andExpect(status().isNotFound());
+
+        doThrow(new ReglaNegocioException("SERVICIO_NO_VALIDO",
+                "Todos los servicios deben existir y estar activos."))
+                .when(barberoService).reemplazarServicios(PERFIL_ID, List.of(SERVICIO_ID));
+        mockMvc.perform(put("/api/barberos/{id}/servicios", PERFIL_ID)
+                        .contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo").value("SERVICIO_NO_VALIDO"));
+    }
+
     private static MockHttpServletRequestBuilder conAutenticacion(
             MockHttpServletRequestBuilder peticion, String rol) {
         return peticion.with(org.springframework.security.test.web.servlet.request
@@ -196,12 +284,20 @@ class BarberoControllerTest {
     private static BarberoAdminResponse admin() {
         return new BarberoAdminResponse(PERFIL_ID, USUARIO_ID, "Barbero de prueba",
                 "+573000000001", "Barbero visible", "Descripción ficticia",
-                "barbero-01.webp", true);
+                "barbero-01.webp", true, List.of());
     }
 
     private static BarberoAdminResponse adminInactivo() {
         return new BarberoAdminResponse(PERFIL_ID, USUARIO_ID, "Barbero de prueba",
                 "+573000000001", "Barbero visible", "Descripción ficticia",
-                "barbero-01.webp", false);
+                "barbero-01.webp", false, List.of());
+    }
+
+    private static ServicioResponse servicio() {
+        ServicioResponse servicio = new ServicioResponse();
+        servicio.setId(SERVICIO_ID);
+        servicio.setNombre("Corte ficticio");
+        servicio.setActivo(true);
+        return servicio;
     }
 }

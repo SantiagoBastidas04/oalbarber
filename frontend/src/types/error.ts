@@ -7,6 +7,8 @@ export interface ApiError {
   status: number
   title: string
   detail: string
+  /** Código de negocio opcional agregado por la API. */
+  codigo?: string
   type?: string
   instance?: string
   /** Motivo del error cuando el HTTP coincide: `NOMBRE_DUPLICADO`, `VALIDACION`… */

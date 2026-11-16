@@ -16,7 +16,7 @@ Páginas privadas en `/panel/**`. El layout y la guarda de rol están en `routes
 - La vista de agenda por día y semana; el barbero solo ve la suya y el administrador, ambas.
 - Acciones de estado de una cita (`COMPLETADA`, `NO_ASISTIO`) y la cancelación por el panel.
 - Formularios del catálogo, horarios, bloqueos, parámetros y barberos.
-- Alta, listado y estado de barberos. La asignación de servicios por perfil no está implementada.
+- Alta, listado y estado de barberos; cada perfil permite asignar servicios activos del catálogo.
 - El aviso de bloqueo con citas afectadas: se pide confirmación y **no** se cancelan solas.
 
 ## Qué NO debe ir aquí
@@ -39,6 +39,7 @@ La página gestiona cuentas y perfiles: lista activos e inactivos, permite crear
 activar o desactivar solo el perfil. La confirmación aclara que las citas no se cancelan ni se
 mueven y que la cuenta y sus sesiones siguen activas.
 
-La selección de servicios por barbero (checkboxes, `GET/PUT /api/barberos/{id}/servicios`) y el
-aviso de citas futuras no están disponibles. Su integración requiere confirmar el contrato real de
-`ServicioService` y del módulo de citas.
+La selección de servicios por barbero usa los servicios activos del catálogo y se guarda mediante
+`PUT /api/barberos/{id}/servicios`. La consulta administrativa incluye las asignaciones en
+`servicioIds` para todos los perfiles. El aviso de citas futuras al quitar un servicio sigue
+pendiente porque la API de citas aún no está disponible.

@@ -25,6 +25,7 @@ public interface BarberoMapper {
     @Mapping(target = "descripcion", source = "barbero.descripcion")
     @Mapping(target = "foto", source = "barbero.foto")
     @Mapping(target = "activo", source = "barbero.activo")
+    @Mapping(target = "servicioIds", ignore = true)
     BarberoAdminResponse aAdmin(Barbero barbero, UsuarioResponse usuario);
 
     /** Construye el perfil mediante la fábrica de dominio, conservando sus invariantes. */

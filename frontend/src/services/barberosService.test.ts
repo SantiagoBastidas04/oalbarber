@@ -4,6 +4,8 @@ import {
   crearBarbero,
   listarBarberosActivos,
   listarBarberosAdmin,
+  listarServiciosDeBarbero,
+  reemplazarServiciosDeBarbero,
 } from './barberosService'
 import type {
   BarberoAdminResponse,
@@ -15,6 +17,7 @@ const apiClientMock = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
   patch: vi.fn(),
+  put: vi.fn(),
 }))
 
 vi.mock('./apiClient', () => ({ apiClient: apiClientMock }))
@@ -32,6 +35,7 @@ const perfilAdmin: BarberoAdminResponse = {
   usuarioId: '11111111-1111-4111-8111-111111111111',
   nombre: 'Cuenta ficticia',
   celular: '+573000000001',
+  servicioIds: [],
 }
 
 describe('barberosService', () => {
@@ -88,5 +92,22 @@ describe('barberosService', () => {
       celular: '+573000000001',
       contrasena: 'ClavePrueba123',
     })).rejects.toBe(error)
+  })
+
+  it('consulta los servicios activos de un perfil', async () => {
+    apiClientMock.get.mockResolvedValue({ data: [] })
+
+    await expect(listarServiciosDeBarbero(perfilAdmin.id)).resolves.toEqual([])
+    expect(apiClientMock.get).toHaveBeenCalledWith(`/barberos/${perfilAdmin.id}/servicios`)
+  })
+
+  it('reemplaza las asignaciones por el endpoint administrativo', async () => {
+    const solicitud = { servicioIds: ['bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'] }
+    apiClientMock.put.mockResolvedValue({ data: [] })
+
+    await expect(reemplazarServiciosDeBarbero(perfilAdmin.id, solicitud)).resolves.toEqual([])
+    expect(apiClientMock.put).toHaveBeenCalledWith(
+      `/barberos/${perfilAdmin.id}/servicios`, solicitud,
+    )
   })
 })

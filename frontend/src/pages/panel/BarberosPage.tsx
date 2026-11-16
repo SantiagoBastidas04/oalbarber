@@ -5,9 +5,11 @@ import { Controller, useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { SelectorPais } from '../../components/comunes/SelectorPais'
 import { useBarberosAdmin, useCambiarEstadoBarbero, useCrearBarbero } from '../../hooks/useBarberos'
+import { useServicios } from '../../hooks/useServicios'
 import type { ApiError } from '../../types/error'
 import type { BarberoRequest } from '../../types/barbero'
 import { componerCelular, paisPorCodigo, PAISES } from '../../utils/celularPais'
+import { BarberoServiciosEditor } from './BarberoServiciosEditor'
 
 const patronFoto = /^[a-z0-9-]+\.(jpg|jpeg|png|webp)$/
 
@@ -59,9 +61,10 @@ function mensajeDeError(error: unknown, respaldo: string): { title: string; deta
   }
 }
 
-/** RF-10: alta y estado de perfiles; no gestiona servicios por barbero (Parte B). */
+/** RF-10: alta, estado y servicios asignados a cada perfil. */
 export function BarberosPage() {
   const consulta = useBarberosAdmin()
+  const catalogo = useServicios()
   const alta = useCrearBarbero()
   const cambioEstado = useCambiarEstadoBarbero()
   const [errorAlta, setErrorAlta] = useState<{ title: string; detail: string } | null>(null)
@@ -383,26 +386,35 @@ export function BarberosPage() {
               {consulta.data?.map((barbero) => {
                 const nombre = barbero.nombrePublico?.trim() || barbero.nombre
                 return (
-                  <li key={barbero.id} className="flex flex-wrap items-center gap-3 px-4 py-4 sm:flex-nowrap sm:px-5">
-                    <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-full border border-marca-200 bg-marca-50 text-marca-700">
-                      <UserRound className="size-5" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-texto">{nombre}</p>
-                      <p className="mt-0.5 truncate text-sm text-texto-suave">{barbero.nombre} · {barbero.celular}</p>
+                  <li key={barbero.id} className="px-4 py-4 sm:px-5">
+                    <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap">
+                      <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-full border border-marca-200 bg-marca-50 text-marca-700">
+                        <UserRound className="size-5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-texto">{nombre}</p>
+                        <p className="mt-0.5 truncate text-sm text-texto-suave">{barbero.nombre} · {barbero.celular}</p>
+                      </div>
+                      <span className={`rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] ${barbero.activo ? 'bg-marca-900 text-white' : 'border border-marca-300 text-marca-500'}`}>
+                        {barbero.activo ? 'Activo' : 'Inactivo'}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={cambioEstado.isPending}
+                        onClick={() => confirmarCambioEstado(barbero.id, nombre, barbero.activo)}
+                        aria-label={`${barbero.activo ? 'Desactivar' : 'Activar'} perfil de ${nombre}`}
+                        className="min-h-11 w-full rounded-full border border-marca-300 px-4 font-mono text-xs font-medium uppercase tracking-[0.1em] text-texto transition-colors hover:border-marca-900 hover:bg-marca-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-900 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                      >
+                        {cambioEstado.isPending ? 'Guardando…' : barbero.activo ? 'Desactivar' : 'Activar'}
+                      </button>
                     </div>
-                    <span className={`rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] ${barbero.activo ? 'bg-marca-900 text-white' : 'border border-marca-300 text-marca-500'}`}>
-                      {barbero.activo ? 'Activo' : 'Inactivo'}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={cambioEstado.isPending}
-                      onClick={() => confirmarCambioEstado(barbero.id, nombre, barbero.activo)}
-                      aria-label={`${barbero.activo ? 'Desactivar' : 'Activar'} perfil de ${nombre}`}
-                      className="min-h-11 w-full rounded-full border border-marca-300 px-4 font-mono text-xs font-medium uppercase tracking-[0.1em] text-texto transition-colors hover:border-marca-900 hover:bg-marca-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-900 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-                    >
-                      {cambioEstado.isPending ? 'Guardando…' : barbero.activo ? 'Desactivar' : 'Activar'}
-                    </button>
+                    <BarberoServiciosEditor
+                      barbero={barbero}
+                      servicios={catalogo.data}
+                      cargandoCatalogo={catalogo.isPending}
+                      errorCatalogo={catalogo.isError}
+                      reintentarCatalogo={() => { void catalogo.refetch() }}
+                    />
                   </li>
                 )
               })}
