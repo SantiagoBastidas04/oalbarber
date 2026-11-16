@@ -12,3 +12,15 @@ export interface ServicioResponse {
   imagen: string | null
   activo: boolean
 }
+
+/** Cuerpo de `POST /api/servicios` y `PUT /api/servicios/{id}` (RF-08). */
+export interface ServicioRequest {
+  nombre: string
+  descripcion: string | null
+  /** Solo se aceptan 40, 90 o 180 minutos. */
+  duracionMin: number
+  /** Mayor que cero; el backend exige máximo dos decimales. */
+  precio: number
+  /** Nombre del archivo estático de la foto, o `null` si no tiene. */
+  imagen: string | null
+}
