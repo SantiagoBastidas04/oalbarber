@@ -22,6 +22,13 @@ alta y cambio de estado. La lista pública no incluye datos personales de la cue
 administrativas requieren rol `ADMINISTRADOR`. El cambio de estado conserva activa la cuenta y sus
 sesiones.
 
+| Método y ruta | Acceso | Comportamiento |
+|---|---|---|
+| `POST /api/barberos/admin` | `ADMINISTRADOR` | Agrega al administrador autenticado como barbero. El cuerpo acepta `nombrePublico`, `descripcion` y `foto` opcionales; la identidad se toma del token. Crea solo el perfil y responde `201`. Si ya existe un perfil responde `409` con `BARBERO_DUPLICADO`. |
+
+El administrador inicial no aparece como barbero automáticamente. El perfil se crea solo al usar
+este endpoint; la cuenta de usuario permanece intacta.
+
 ### Servicios ofrecidos
 
 | Método y ruta | Acceso | Comportamiento |

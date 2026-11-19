@@ -36,9 +36,10 @@ Perfil profesional enlazado a un usuario con rol `BARBERO` o `ADMINISTRADOR`.
 - Campos: `id`, `usuarioId` (columna `usuario_id`, referencia única a `usuario`), `activo`.
 - El usuario referenciado debe tener rol `BARBERO` o `ADMINISTRADOR`; la validación vive en el service.
 - El perfil no guarda credenciales ni datos personales: el nombre y el celular están en `usuario`.
-- Los perfiles no se insertan desde una migración. `AdminInicializador` asegura el perfil del
-  administrador inicial al arrancar; las cuentas `BARBERO` y sus perfiles se crean desde el flujo
-  administrativo del módulo.
+- Los perfiles no se insertan desde una migración ni al arrancar la aplicación. `AdminInicializador`
+  solo crea o localiza la cuenta administrativa. El administrador puede agregarse explícitamente
+  con `POST /api/barberos/admin`, que inserta el perfil asociado a la cuenta existente sin cambiarla.
+  Las cuentas `BARBERO` y sus perfiles se crean desde el flujo administrativo del módulo.
 
 ## Referencias
 

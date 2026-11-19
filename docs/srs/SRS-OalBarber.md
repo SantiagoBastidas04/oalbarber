@@ -120,7 +120,7 @@ entrega en el primer mes.
 | RF-07 | Catálogo | La web muestra los servicios con nombre, duración, precio y foto. | Alta |
 | RF-08 | Catálogo | El administrador crea, edita y desactiva servicios (nombre, descripción, duración y precio). | Alta |
 | RF-09 | Catálogo | La página de inicio presenta el negocio, el horario de atención y el acceso al catálogo y a la reserva. | Alta |
-| RF-10 | Barberos y horarios | El administrador crea y desactiva barberos (usuarios con rol BARBERO). | Media |
+| RF-10 | Barberos y horarios | El administrador crea y desactiva barberos (usuarios con rol BARBERO). La cuenta con rol ADMINISTRADOR puede agregarse explícitamente como barbero reutilizando su usuario existente; el perfil no se crea automáticamente. | Media |
 | RF-11 | Barberos y horarios | El administrador configura el horario por día y por barbero, incluido el almuerzo. | Alta |
 | RF-12 | Barberos y horarios | El administrador crea bloqueos de franjas o de fechas completas por barbero. | Alta |
 | RF-13 | Barberos y horarios | Si un bloqueo cubre citas existentes, el sistema avisa y pide confirmación, y no las cancela. | Alta |
