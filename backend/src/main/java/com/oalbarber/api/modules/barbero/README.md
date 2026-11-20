@@ -35,7 +35,7 @@ Perfil profesional enlazado a una cuenta de `usuario` con rol `BARBERO` o `ADMIN
 
 ## Relación con otros módulos
 
-`BarberoService` crea la cuenta `BARBERO` mediante `UsuarioService` y luego su perfil en la misma transacción. `AdminInicializador` asegura el perfil del administrador inicial después de crear o localizar su cuenta; no altera cuentas existentes con otro rol. El DTO público omite el nombre y celular de la cuenta. Desactivar un perfil no desactiva la cuenta de usuario.
+`BarberoService` crea la cuenta `BARBERO` mediante `UsuarioService` y luego su perfil en la misma transacción. `AdminInicializador` crea o localiza la cuenta `ADMINISTRADOR`, pero nunca crea el perfil profesional. El administrador puede agregarse explícitamente mediante `POST /api/barberos/admin`: se reutiliza el UUID de su identidad autenticada y se inserta solo una fila en `barbero`, sin alterar la cuenta. El DTO público omite el nombre y celular de la cuenta. Desactivar un perfil no desactiva la cuenta de usuario.
 
 La tabla puente `barbero_servicio` se administra desde este módulo mediante clave compuesta y
 FKs con `ON DELETE RESTRICT`. El catálogo se consulta solo a través de `ServicioService`; no se

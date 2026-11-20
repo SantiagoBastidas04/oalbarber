@@ -1,13 +1,14 @@
 # Modelo de datos OalBarber
 
-**Estado:** modelo de cuentas, catálogo, perfiles y asignaciones implementado en V1–V5; horarios,
+**Estado:** modelo de cuentas, catálogo, perfiles y asignaciones implementado en V1–V6; horarios,
 bloqueos y citas siguen pendientes. **Última revisión:** 2026-11-15. El SRS se conserva sin cambios.
 
 ## Tablas implementadas
 
 Las migraciones crean `usuario` (V1), `sesion_refresco` (V2), `servicio` (V3), `barbero` (V4) y
-`barbero_servicio` (V5). Los identificadores de estas tablas son UUID. V4 crea únicamente
-`barbero`, con `usuario_id` único, FK a `usuario(id)` y `ON DELETE RESTRICT`. V5 enlaza barbero y
+`barbero_servicio` (V5). V6 añade `barbero.fecha_creacion`. Los identificadores de estas tablas son
+UUID. V4 crea únicamente `barbero`, con `usuario_id` único, FK a `usuario(id)` y `ON DELETE
+RESTRICT`. V5 enlaza barbero y
 servicio con una clave primaria compuesta, dos FKs con `ON DELETE RESTRICT`, `creado_en` y un
 índice para `servicio_id`.
 
@@ -54,6 +55,7 @@ erDiagram
         text descripcion
         varchar foto
         boolean activo
+        timestamptz fecha_creacion
     }
 
     barbero_servicio {
@@ -70,9 +72,10 @@ erDiagram
 ```
 
 `barbero` es un perfil separado de la identidad. El nombre, celular y credenciales permanecen en
-`usuario`; el perfil guarda presentación pública y estado profesional. El inicializador asegura un
-perfil para el administrador inicial. Cambiar `barbero.activo` no cambia `usuario.activo` ni revoca
-sus sesiones.
+`usuario`; el perfil guarda presentación pública, estado profesional y fecha de creación. El
+inicializador no crea perfil para el administrador: este se agrega explícitamente mediante
+`POST /api/barberos/admin`, que solo inserta en `barbero`. Cambiar `barbero.activo` no cambia
+`usuario.activo` ni revoca sus sesiones.
 
 `barbero_servicio` representa las asignaciones y pertenece al módulo `barbero`. El módulo consulta
 el catálogo a través de `ServicioService`, valida que los servicios estén activos y permite una
@@ -119,8 +122,9 @@ implementado por `cita`, para evitar dependencia circular. Detalle y estado de l
 - `usuario.celular` es único y `usuario.contrasena_hash` almacena el hash, no la contraseña.
 - `usuario.rol` admite `CLIENTE`, `BARBERO` y `ADMINISTRADOR`.
 - `barbero.usuario_id` es único y su FK usa `ON DELETE RESTRICT`.
-- Las cuentas de barbero y perfil se crean desde el flujo administrativo; los perfiles no se
-  insertan mediante una migración.
+- Las cuentas y perfiles de barberos se crean desde el flujo administrativo. El administrador ya
+  existente puede agregarse explícitamente como perfil sin cambiar su cuenta. Ningún perfil se
+  inserta mediante una migración ni por el inicializador.
 - `barbero_servicio` evita pares duplicados y restringe el borrado de los registros referenciados.
 - El DTO público de barbero solo lista perfiles activos y no incluye nombre ni celular de la
   cuenta. El DTO administrativo incluye esos campos y `servicioIds`, y está restringido a
@@ -128,6 +132,6 @@ implementado por `cita`, para evitar dependencia circular. Detalle y estado de l
 
 ## Conteo y SRS
 
-El SRS adjunto mantiene su conteo y no se modifica en esta entrega. El esquema actualmente
-implementado corresponde a V1–V5; las tablas restantes descritas por el SRS se mantienen como
-trabajo pendiente hasta que existan los módulos respectivos.
+El esquema actualmente implementado corresponde a V1–V6; las tablas restantes descritas por el SRS
+se mantienen como trabajo pendiente hasta que existan los módulos respectivos. El detalle de
+RF-10 en el SRS aclara que el perfil del administrador es explícito y opcional.

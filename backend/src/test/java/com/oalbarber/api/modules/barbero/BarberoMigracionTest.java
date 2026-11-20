@@ -39,13 +39,13 @@ class BarberoMigracionTest {
                 .locations("classpath:db/migration")
                 .load();
 
-        assertEquals(5, flyway.migrate().migrationsExecuted,
-                "La base vacía debe aplicar V1, V2, V3, V4 y V5");
-        assertEquals(List.of("1", "2", "3", "4", "5"),
+        assertEquals(6, flyway.migrate().migrationsExecuted,
+                "La base vacía debe aplicar V1 a V6");
+        assertEquals(List.of("1", "2", "3", "4", "5", "6"),
                 Arrays.stream(flyway.info().applied())
                         .map(migracion -> migracion.getVersion().getVersion())
                         .toList(),
-                "Flyway debe aplicar la secuencia V1 a V5");
+                "Flyway debe aplicar la secuencia V1 a V6");
     }
 
     @Test
@@ -75,6 +75,23 @@ class BarberoMigracionTest {
         // El segundo usuario permanece sin perfil, confirmando que la restricción
         // no impide tener usuarios que todavía no son barberos.
         assertEquals(0, cantidadDeBarberosPara(segundoUsuarioId));
+    }
+
+    @Test
+    void agregaFechaDeCreacionAlPerfilDeBarbero() throws Exception {
+        try (Connection conexion = conexion();
+             PreparedStatement consulta = conexion.prepareStatement("""
+                     SELECT is_nullable, column_default
+                     FROM information_schema.columns
+                     WHERE table_schema = 'public' AND table_name = 'barbero'
+                       AND column_name = 'fecha_creacion'
+                     """)) {
+            try (ResultSet resultado = consulta.executeQuery()) {
+                assertTrue(resultado.next(), "V6 debe agregar barbero.fecha_creacion");
+                assertEquals("NO", resultado.getString("is_nullable"));
+                assertTrue(resultado.getString("column_default").contains("now()"));
+            }
+        }
     }
 
     @Test

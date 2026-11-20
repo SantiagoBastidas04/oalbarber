@@ -30,7 +30,9 @@ import com.oalbarber.api.common.exception.ReglaNegocioException;
 import com.oalbarber.api.modules.barbero.domain.Barbero;
 import com.oalbarber.api.modules.barbero.domain.BarberoServicio;
 import com.oalbarber.api.modules.barbero.dto.BarberoAdminResponse;
+import com.oalbarber.api.modules.barbero.dto.BarberoPerfilRequest;
 import com.oalbarber.api.modules.barbero.dto.BarberoPublicoResponse;
+import com.oalbarber.api.modules.barbero.dto.BarberoResponse;
 import com.oalbarber.api.modules.barbero.dto.BarberoRequest;
 import com.oalbarber.api.modules.barbero.mapper.BarberoMapper;
 import com.oalbarber.api.modules.barbero.repository.BarberoRepository;
@@ -169,19 +171,74 @@ class BarberoServiceTest {
     }
 
     @Test
-    void aseguraPerfilAdministradorUnaSolaVezYNoCreaPerfilParaOtroRol() {
+    void registraAlAdministradorAutenticadoSinCrearNiModificarSuCuenta() {
+        BarberoPerfilRequest solicitud = new BarberoPerfilRequest(
+                "Admin visible", "Descripción", "admin.webp");
         UsuarioResponse administrador = usuario(RolUsuario.ADMINISTRADOR);
+        Barbero entidad = Barbero.crear(USUARIO_ID, "Admin visible", "Descripción", "admin.webp");
+        BarberoResponse respuesta = new BarberoResponse(BARBERO_ID, USUARIO_ID,
+                "Usuario ficticio", "Admin visible", "Descripción", "admin.webp", true);
         when(usuarioService.obtenerPorId(USUARIO_ID)).thenReturn(administrador);
-        when(barberoRepository.existsByUsuarioId(USUARIO_ID)).thenReturn(true, false);
+        when(barberoRepository.findByUsuarioId(USUARIO_ID)).thenReturn(Optional.empty());
+        when(barberoMapper.aEntidad(solicitud, USUARIO_ID)).thenReturn(entidad);
+        when(barberoRepository.save(entidad)).thenReturn(entidad);
+        when(barberoMapper.aResponse(entidad, administrador)).thenReturn(respuesta);
 
-        assertTrue(barberoService.asegurarPerfilAdministrador(USUARIO_ID));
-        assertTrue(barberoService.asegurarPerfilAdministrador(USUARIO_ID));
-        verify(barberoRepository).save(any(Barbero.class));
+        assertEquals(respuesta,
+                barberoService.registrarAdministradorComoBarbero(USUARIO_ID, solicitud));
+
+        verify(barberoRepository).save(entidad);
+        verify(usuarioService, never()).crearUsuarioConRol(
+                any(UsuarioRequest.class), any(RolUsuario.class));
+    }
+
+    @Test
+    void rechazaAdministradorInactivoOSinRolAdministrador() {
+        UsuarioResponse inactivo = usuario(RolUsuario.ADMINISTRADOR);
+        inactivo.setActivo(false);
+        when(usuarioService.obtenerPorId(USUARIO_ID)).thenReturn(inactivo);
+
+        ReglaNegocioException excepcion = assertThrows(ReglaNegocioException.class,
+                () -> barberoService.registrarAdministradorComoBarbero(
+                        USUARIO_ID, new BarberoPerfilRequest(null, null, null)));
+
+        assertEquals("BARBERO_ROL_INVALIDO", excepcion.getCodigo());
+        verifyNoInteractions(barberoRepository, barberoMapper);
 
         UsuarioResponse cliente = usuario(RolUsuario.CLIENTE);
         when(usuarioService.obtenerPorId(BARBERO_ID)).thenReturn(cliente);
-        assertFalse(barberoService.asegurarPerfilAdministrador(BARBERO_ID));
-        verify(barberoRepository, never()).existsByUsuarioId(BARBERO_ID);
+        assertThrows(ReglaNegocioException.class,
+                () -> barberoService.registrarAdministradorComoBarbero(
+                        BARBERO_ID, new BarberoPerfilRequest(null, null, null)));
+        verify(barberoRepository, never()).save(any(Barbero.class));
+    }
+
+    @Test
+    void rechazaPerfilExistenteYIndicaReactivacionSiEstaInactivo() {
+        UsuarioResponse administrador = usuario(RolUsuario.ADMINISTRADOR);
+        when(usuarioService.obtenerPorId(USUARIO_ID)).thenReturn(administrador);
+        Barbero perfilInactivo = Barbero.crear(USUARIO_ID);
+        perfilInactivo.cambiarEstado(false);
+        when(barberoRepository.findByUsuarioId(USUARIO_ID)).thenReturn(Optional.of(perfilInactivo));
+
+        RecursoDuplicadoException excepcion = assertThrows(RecursoDuplicadoException.class,
+                () -> barberoService.registrarAdministradorComoBarbero(
+                        USUARIO_ID, new BarberoPerfilRequest(null, null, null)));
+
+        assertEquals("BARBERO_DUPLICADO", excepcion.getCodigo());
+        org.junit.jupiter.api.Assertions.assertTrue(excepcion.getMessage().contains("reactivarse"));
+        verify(barberoRepository, never()).save(any(Barbero.class));
+    }
+
+    @Test
+    void propagaUsuarioInexistenteAlRegistrarAdministradorComoBarbero() {
+        when(usuarioService.obtenerPorId(USUARIO_ID))
+                .thenThrow(new RecursoNoEncontradoException("No existe el usuario indicado."));
+
+        assertThrows(RecursoNoEncontradoException.class,
+                () -> barberoService.registrarAdministradorComoBarbero(
+                        USUARIO_ID, new BarberoPerfilRequest(null, null, null)));
+        verifyNoInteractions(barberoRepository, barberoMapper);
     }
 
     @Test

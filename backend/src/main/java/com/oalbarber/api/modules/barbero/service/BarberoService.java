@@ -11,11 +11,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.oalbarber.api.common.exception.RecursoNoEncontradoException;
+import com.oalbarber.api.common.exception.RecursoDuplicadoException;
 import com.oalbarber.api.common.exception.ReglaNegocioException;
 import com.oalbarber.api.modules.barbero.domain.Barbero;
 import com.oalbarber.api.modules.barbero.domain.BarberoServicio;
 import com.oalbarber.api.modules.barbero.dto.BarberoAdminResponse;
+import com.oalbarber.api.modules.barbero.dto.BarberoPerfilRequest;
 import com.oalbarber.api.modules.barbero.dto.BarberoPublicoResponse;
+import com.oalbarber.api.modules.barbero.dto.BarberoResponse;
 import com.oalbarber.api.modules.barbero.dto.BarberoRequest;
 import com.oalbarber.api.modules.barbero.mapper.BarberoMapper;
 import com.oalbarber.api.modules.barbero.repository.BarberoRepository;
@@ -73,6 +76,38 @@ public class BarberoService {
         Barbero barbero = barberoMapper.aEntidad(solicitud, usuario.getId());
         Barbero guardado = barberoRepository.save(barbero);
         return aAdmin(guardado, usuario);
+    }
+
+    /**
+     * Registra al administrador autenticado como barbero reutilizando su cuenta existente.
+     * No crea ni modifica datos de usuario; un perfil ya existente debe reactivarse.
+     *
+     * @param usuarioId UUID del administrador autenticado
+     * @param datos datos opcionales de presentación del perfil
+     * @return perfil asociado a la cuenta administrativa existente
+     * @throws RecursoNoEncontradoException si no existe la cuenta indicada
+     * @throws ReglaNegocioException si la cuenta está inactiva o no tiene rol ADMINISTRADOR
+     * @throws RecursoDuplicadoException si ya existe un perfil para la cuenta
+     */
+    @Transactional
+    public BarberoResponse registrarAdministradorComoBarbero(
+            UUID usuarioId, BarberoPerfilRequest datos) {
+        UsuarioResponse usuario = usuarioService.obtenerPorId(usuarioId);
+        if (!usuario.isActivo() || usuario.getRol() != RolUsuario.ADMINISTRADOR) {
+            throw new ReglaNegocioException("BARBERO_ROL_INVALIDO",
+                    "Solo una cuenta activa con rol ADMINISTRADOR puede agregarse como barbero.");
+        }
+
+        barberoRepository.findByUsuarioId(usuarioId).ifPresent(perfil -> {
+            String mensaje = perfil.isActivo()
+                    ? "Esta cuenta ya tiene un perfil de barbero."
+                    : "Esta cuenta ya tiene un perfil de barbero inactivo; debe reactivarse.";
+            throw new RecursoDuplicadoException("BARBERO_DUPLICADO", mensaje);
+        });
+
+        Barbero perfil = barberoMapper.aEntidad(datos, usuarioId);
+        Barbero guardado = barberoRepository.save(perfil);
+        return barberoMapper.aResponse(guardado, usuario);
     }
 
     /** Cambia el estado del perfil sin desactivar la cuenta ni cancelar citas. */
@@ -203,25 +238,6 @@ public class BarberoService {
                 .anyMatch(servicio -> servicio.getId().equals(servicioId));
         return servicioActivo && barberoServicioRepository
                 .existsById_BarberoIdAndId_ServicioId(barberoId, servicioId);
-    }
-
-    /**
-     * Garantiza el perfil del usuario administrador inicial sin crear ni modificar su cuenta.
-     * Si ya existe, no inserta otro; si el usuario tiene otro rol, no crea el perfil.
-     *
-     * @param usuarioId UUID del usuario que debe verificarse
-     * @return {@code true} si el usuario es administrador y tiene perfil; {@code false} si no lo es
-     */
-    @Transactional
-    public boolean asegurarPerfilAdministrador(UUID usuarioId) {
-        UsuarioResponse usuario = usuarioService.obtenerPorId(usuarioId);
-        if (usuario.getRol() != RolUsuario.ADMINISTRADOR) {
-            return false;
-        }
-        if (!barberoRepository.existsByUsuarioId(usuarioId)) {
-            barberoRepository.save(Barbero.crear(usuarioId));
-        }
-        return true;
     }
 
     private BarberoAdminResponse aAdmin(Barbero barbero) {

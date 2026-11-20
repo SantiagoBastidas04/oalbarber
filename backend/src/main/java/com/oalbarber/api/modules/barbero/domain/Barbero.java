@@ -1,5 +1,6 @@
 package com.oalbarber.api.modules.barbero.domain;
 
+import java.time.Instant;
 import java.util.UUID;
 import java.util.Objects;
 
@@ -8,6 +9,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
@@ -43,6 +45,9 @@ public class Barbero {
     @Column(name = "activo", nullable = false)
     private boolean activo = true;
 
+    @Column(name = "fecha_creacion", nullable = false, updatable = false)
+    private Instant fechaCreacion;
+
     /** Crea un perfil sin datos de presentación, activo por defecto. */
     public static Barbero crear(UUID usuarioId) {
         return crear(usuarioId, null, null, null);
@@ -63,6 +68,13 @@ public class Barbero {
     /** Cambia únicamente el estado del perfil; no modifica la cuenta de usuario. */
     public void cambiarEstado(boolean activo) {
         this.activo = activo;
+    }
+
+    @PrePersist
+    void alCrear() {
+        if (fechaCreacion == null) {
+            fechaCreacion = Instant.now();
+        }
     }
 
     @Override

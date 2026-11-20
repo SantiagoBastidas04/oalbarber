@@ -7,8 +7,8 @@ Paquete `com.oalbarber.api.config`.
 - `SecurityConfig`: cadena JWT de Spring Security. Mantiene las rutas expresamente públicas y
   exige autenticación en el resto; el acceso administrativo se limita por rol en los controladores.
 - `AdminInicializador`: crea el administrador inicial solo cuando están configurados celular y
-  contraseña; si la cuenta ya existe, no cambia sus credenciales ni su rol. Para una cuenta con rol
-  real `ADMINISTRADOR`, asegura un perfil de barbero idempotentemente.
+  contraseña; si la cuenta ya existe, no cambia sus credenciales ni su rol. No crea perfiles de
+  barbero: el administrador se agrega explícitamente desde el endpoint protegido del módulo.
 - La configuración de CORS limitada al dominio del frontend (por definir en despliegue).
 - La configuración de OpenAPI/springdoc, cuando se agregue la dependencia.
 - La configuración de zona horaria (`America/Bogota`) y del reloj (`Clock`) usado por los services.
