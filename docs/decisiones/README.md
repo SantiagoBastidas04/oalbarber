@@ -30,6 +30,8 @@ Decisiones que ya se conocen y merecen un ADR al implementarse:
   `usuario`, `sesion_refresco` y `barbero`; no define el ID del catálogo de servicios.
 - [ADR-0002: asignación barbero-servicio y consulta de citas futuras](ADR-0002-asignacion-barbero-servicio-y-consulta-citas.md)
   — relación implementada; integración con disponibilidad y consulta de citas pendientes.
+- [ADR-0003: el perfil de barbero del administrador es opcional](ADR-0003-administrador-como-barbero-opcional.md)
+  — el administrador se agrega explícitamente y se reutiliza su cuenta existente.
 
 ## Qué NO va aquí
 

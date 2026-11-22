@@ -8,6 +8,8 @@ import org.mapstruct.Mapping;
 import com.oalbarber.api.modules.barbero.domain.Barbero;
 import com.oalbarber.api.modules.barbero.dto.BarberoAdminResponse;
 import com.oalbarber.api.modules.barbero.dto.BarberoPublicoResponse;
+import com.oalbarber.api.modules.barbero.dto.BarberoPerfilRequest;
+import com.oalbarber.api.modules.barbero.dto.BarberoResponse;
 import com.oalbarber.api.modules.barbero.dto.BarberoRequest;
 import com.oalbarber.api.modules.usuario.dto.UsuarioResponse;
 
@@ -28,8 +30,25 @@ public interface BarberoMapper {
     @Mapping(target = "servicioIds", ignore = true)
     BarberoAdminResponse aAdmin(Barbero barbero, UsuarioResponse usuario);
 
+    @Mapping(target = "id", source = "barbero.id")
+    @Mapping(target = "usuarioId", source = "barbero.usuarioId")
+    @Mapping(target = "nombre", source = "usuario.nombre")
+    @Mapping(target = "nombrePublico", source = "barbero.nombrePublico")
+    @Mapping(target = "descripcion", source = "barbero.descripcion")
+    @Mapping(target = "foto", source = "barbero.foto")
+    @Mapping(target = "activo", source = "barbero.activo")
+    BarberoResponse aResponse(Barbero barbero, UsuarioResponse usuario);
+
     /** Construye el perfil mediante la fábrica de dominio, conservando sus invariantes. */
     default Barbero aEntidad(BarberoRequest solicitud, UUID usuarioId) {
+        return Barbero.crear(usuarioId,
+                normalizarOpcional(solicitud.nombrePublico()),
+                normalizarOpcional(solicitud.descripcion()),
+                normalizarOpcional(solicitud.foto()));
+    }
+
+    /** Construye un perfil desde los datos propios de presentación. */
+    default Barbero aEntidad(BarberoPerfilRequest solicitud, UUID usuarioId) {
         return Barbero.crear(usuarioId,
                 normalizarOpcional(solicitud.nombrePublico()),
                 normalizarOpcional(solicitud.descripcion()),

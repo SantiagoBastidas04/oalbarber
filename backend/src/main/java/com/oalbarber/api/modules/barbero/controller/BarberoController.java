@@ -3,6 +3,7 @@ package com.oalbarber.api.modules.barbero.controller;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.security.core.Authentication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.oalbarber.api.modules.barbero.dto.BarberoAdminResponse;
 import com.oalbarber.api.modules.barbero.dto.BarberoPublicoResponse;
+import com.oalbarber.api.modules.barbero.dto.BarberoPerfilRequest;
+import com.oalbarber.api.modules.barbero.dto.BarberoResponse;
 import com.oalbarber.api.modules.barbero.dto.BarberoRequest;
 import com.oalbarber.api.modules.barbero.dto.BarberoServiciosRequest;
 import com.oalbarber.api.modules.barbero.dto.CambiarEstadoBarberoRequest;
@@ -93,6 +96,35 @@ public class BarberoController {
     @PostMapping
     public ResponseEntity<BarberoAdminResponse> crear(@Valid @RequestBody BarberoRequest solicitud) {
         return ResponseEntity.status(HttpStatus.CREATED).body(barberoService.crear(solicitud));
+    }
+
+    /** Agrega al administrador autenticado como barbero sin crear ni modificar su cuenta. */
+    @Operation(summary = "Agregar al administrador como barbero",
+            description = "Crea únicamente el perfil asociado a la cuenta ADMINISTRADOR autenticada.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Perfil creado"),
+            @ApiResponse(responseCode = "400", description = "Datos de perfil inválidos",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "Se requiere autenticación",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Se requiere rol ADMINISTRADOR",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404", description = "No existe la cuenta autenticada",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "La cuenta ya tiene perfil de barbero",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PostMapping("/admin")
+    public ResponseEntity<BarberoResponse> registrarAdministradorComoBarbero(
+            Authentication autenticacion,
+            @Valid @RequestBody(required = false) BarberoPerfilRequest solicitud) {
+        UUID usuarioId = UUID.fromString(autenticacion.getName());
+        BarberoPerfilRequest datos = solicitud == null
+                ? new BarberoPerfilRequest(null, null, null) : solicitud;
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(barberoService.registrarAdministradorComoBarbero(usuarioId, datos));
     }
 
     /** Cambia el estado del perfil; conserva activa la cuenta y sus sesiones. */

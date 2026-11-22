@@ -6,6 +6,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -37,6 +38,7 @@ import com.oalbarber.api.config.SecurityConfig;
 import com.oalbarber.api.modules.auth.service.TokenServicio;
 import com.oalbarber.api.modules.barbero.controller.BarberoController;
 import com.oalbarber.api.modules.barbero.dto.BarberoAdminResponse;
+import com.oalbarber.api.modules.barbero.dto.BarberoResponse;
 import com.oalbarber.api.modules.barbero.dto.BarberoPublicoResponse;
 import com.oalbarber.api.modules.barbero.service.BarberoService;
 import com.oalbarber.api.modules.servicio.dto.ServicioResponse;
@@ -128,6 +130,44 @@ class BarberoControllerTest {
                 .andExpect(jsonPath("$.id").value(PERFIL_ID.toString()));
 
         verify(barberoService).crear(any());
+    }
+
+    @Test
+    void administradorPuedeCrearSuPerfilSinRecibirUsuarioIdEnElCuerpo() throws Exception {
+        BarberoResponse respuesta = new BarberoResponse(PERFIL_ID, USUARIO_ID,
+                "Administrador ficticio", "Admin visible", null, "admin.webp", true);
+        when(barberoService.registrarAdministradorComoBarbero(eq(USUARIO_ID), any()))
+                .thenReturn(respuesta);
+
+        mockMvc.perform(post("/api/barberos/admin")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(conAutenticacion(post("/api/barberos/admin"), "CLIENTE")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/barberos/admin")
+                        .with(org.springframework.security.test.web.servlet.request
+                                .SecurityMockMvcRequestPostProcessors.user(USUARIO_ID.toString())
+                                .roles("ADMINISTRADOR"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nombrePublico\":\"Admin visible\",\"foto\":\"admin.webp\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.usuarioId").value(USUARIO_ID.toString()))
+                .andExpect(jsonPath("$.nombre").value("Administrador ficticio"));
+
+        verify(barberoService).registrarAdministradorComoBarbero(eq(USUARIO_ID), any());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void registroDelPerfilAdminRechazaRutasEnElNombreDeFoto() throws Exception {
+        mockMvc.perform(post("/api/barberos/admin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"foto\":\"../secreto.webp\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.codigo").value("VALIDACION"));
+
+        verifyNoInteractions(barberoService);
     }
 
     @Test

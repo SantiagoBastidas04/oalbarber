@@ -35,8 +35,9 @@ Perfil profesional enlazado a una cuenta con rol `BARBERO` o `ADMINISTRADOR`.
 - `BarberoService` lista los barberos activos y obtiene el perfil por identificador o por usuario.
 - Crea una cuenta con rol `BARBERO` mediante `UsuarioService` y su perfil dentro de una única
   transacción; la contraseña se cifra en el módulo `usuario`.
-- Asegura idempotentemente el perfil de una cuenta con rol real `ADMINISTRADOR` para
-  `AdminInicializador`; no cambia cuentas de otros roles.
+- Registra explícitamente al administrador autenticado como barbero reutilizando su cuenta; valida
+  el rol real `ADMINISTRADOR` y nunca crea ni modifica datos de `usuario`. El inicializador no crea
+  el perfil automáticamente.
 - Cambia el estado del perfil sin cambiar `usuario.activo`. Por ello, el estado de cuenta y el del
   perfil son independientes.
 - La lista pública incluye solo perfiles activos y nunca expone nombre ni celular de la cuenta.
