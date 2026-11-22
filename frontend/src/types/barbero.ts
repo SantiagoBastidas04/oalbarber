@@ -42,3 +42,21 @@ export interface BarberoRequest {
 export interface CambiarEstadoBarberoRequest {
   activo: boolean
 }
+
+/** Datos opcionales para agregar la cuenta administradora como barbero. */
+export interface BarberoPerfilRequest {
+  nombrePublico?: string | null
+  descripcion?: string | null
+  foto?: string | null
+}
+
+/** Perfil creado a partir de la cuenta del administrador autenticado. */
+export interface BarberoPerfilResponse {
+  id: string
+  usuarioId: string
+  nombre: string
+  nombrePublico: string | null
+  descripcion: string | null
+  foto: string | null
+  activo: boolean
+}
