@@ -4,9 +4,10 @@ import {
   crearBarbero,
   listarBarberosActivos,
   listarBarberosAdmin,
+  registrarAdministradorComoBarbero,
   reemplazarServiciosDeBarbero,
 } from '../services/barberosService'
-import type { BarberoRequest } from '../types/barbero'
+import type { BarberoPerfilRequest, BarberoRequest } from '../types/barbero'
 
 /** Claves estables de caché para los listados público y administrativo (RF-10). */
 export const clavesBarberos = {
@@ -46,8 +47,23 @@ export function useCrearBarbero() {
   })
 }
 
-/** Cambia el estado del perfil y refresca ambos listados. */
-export function useCambiarEstadoBarbero() {
+/** Agrega la cuenta del administrador autenticado como barbero y refresca. */
+export function useRegistrarAdministradorComoBarbero() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (solicitud: BarberoPerfilRequest) =>
+      registrarAdministradorComoBarbero(solicitud),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: clavesBarberos.publicos }),
+        queryClient.invalidateQueries({ queryKey: clavesBarberos.admin }),
+      ])
+    },
+  })
+}
+
+/** Cambia el estado del perfil y refresca ambos listados. */export function useCambiarEstadoBarbero() {
   const queryClient = useQueryClient()
 
   return useMutation({

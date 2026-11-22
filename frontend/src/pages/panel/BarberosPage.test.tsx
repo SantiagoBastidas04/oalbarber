@@ -7,18 +7,35 @@ import {
   cambiarEstadoBarbero,
   crearBarbero,
   listarBarberosAdmin,
+  registrarAdministradorComoBarbero,
   reemplazarServiciosDeBarbero,
 } from '../../services/barberosService'
 import { listarServicios } from '../../services/serviciosService'
-import type { BarberoAdminResponse } from '../../types/barbero'
+import type { BarberoAdminResponse, BarberoPerfilResponse } from '../../types/barbero'
 import type { ServicioResponse } from '../../types/servicio'
 import { BarberosPage } from './BarberosPage'
+
+const ADMIN_ID = '99999999-9999-4999-8999-999999999999'
+
+vi.mock('../../hooks/useAuth', () => ({
+  useAuth: () => ({
+    usuario: {
+      id: ADMIN_ID,
+      nombre: 'Admin Prueba',
+      celular: '+573000000099',
+      rol: 'ADMIN',
+      activo: true,
+      fechaCreacion: '2026-11-01T10:00:00-05:00',
+    },
+  }),
+}))
 
 vi.mock('../../services/barberosService', () => ({
   cambiarEstadoBarbero: vi.fn(),
   crearBarbero: vi.fn(),
   listarBarberosActivos: vi.fn(),
   listarBarberosAdmin: vi.fn(),
+  registrarAdministradorComoBarbero: vi.fn(),
   reemplazarServiciosDeBarbero: vi.fn(),
 }))
 
@@ -252,6 +269,69 @@ describe('BarberosPage', () => {
     renderizarPagina()
 
     expect(await screen.findByText('Aún no hay perfiles de barbero')).toBeInTheDocument()
+  })
+
+  it('agrega la cuenta del administrador como barbero sin pedir contraseña', async () => {
+    const usuario = userEvent.setup()
+    const perfil: BarberoPerfilResponse = {
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      usuarioId: ADMIN_ID,
+      nombre: 'Admin Prueba',
+      nombrePublico: 'Admin en la silla',
+      descripcion: null,
+      foto: null,
+      activo: true,
+    }
+    vi.mocked(listarBarberosAdmin)
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([
+        {
+          ...barberoActivo,
+          id: perfil.id,
+          usuarioId: ADMIN_ID,
+          nombre: 'Admin Prueba',
+          nombrePublico: 'Admin en la silla',
+        },
+      ])
+    vi.mocked(registrarAdministradorComoBarbero).mockResolvedValue(perfil)
+    renderizarPagina()
+
+    await usuario.type(
+      await screen.findByLabelText('Cómo te verán los clientes (opcional)'),
+      'Admin en la silla',
+    )
+    await usuario.click(screen.getByRole('button', { name: 'Agregar mi cuenta' }))
+
+    expect(registrarAdministradorComoBarbero).toHaveBeenCalledWith({
+      nombrePublico: 'Admin en la silla',
+    })
+    expect(await screen.findByRole('status')).toHaveTextContent('ya aparece como barbero')
+    expect(screen.queryByRole('button', { name: 'Agregar mi cuenta' })).not.toBeInTheDocument()
+  })
+
+  it('oculta la tarjeta cuando la cuenta del administrador ya tiene perfil', async () => {
+    vi.mocked(listarBarberosAdmin).mockResolvedValue([
+      { ...barberoActivo, usuarioId: ADMIN_ID, nombre: 'Admin Prueba', nombrePublico: null },
+    ])
+    renderizarPagina()
+
+    await screen.findByText('Admin Prueba')
+    expect(screen.queryByText('¿Tú también atiendes en la silla?')).not.toBeInTheDocument()
+  })
+
+  it('muestra el mensaje del backend si el perfil del administrador ya existe', async () => {
+    const usuario = userEvent.setup()
+    vi.mocked(registrarAdministradorComoBarbero).mockRejectedValue({
+      status: 409,
+      title: 'Recurso duplicado',
+      detail: 'Esta cuenta ya tiene un perfil de barbero.',
+      codigo: 'BARBERO_DUPLICADO',
+    })
+    renderizarPagina()
+
+    await usuario.click(await screen.findByRole('button', { name: 'Agregar mi cuenta' }))
+
+    expect(await screen.findByText('Esta cuenta ya tiene un perfil de barbero.')).toBeInTheDocument()
   })
 
   it('muestra un error de carga con opción de reintentar', async () => {

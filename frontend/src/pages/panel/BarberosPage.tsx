@@ -1,10 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { CircleAlert, Loader2, Plus, Scissors, UserRound } from 'lucide-react'
+import { BadgeCheck, CircleAlert, Loader2, Plus, Scissors, UserRound, UserPlus } from 'lucide-react'
 import { useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { SelectorPais } from '../../components/comunes/SelectorPais'
-import { useBarberosAdmin, useCambiarEstadoBarbero, useCrearBarbero } from '../../hooks/useBarberos'
+import { useAuth } from '../../hooks/useAuth'
+import {
+  useBarberosAdmin,
+  useCambiarEstadoBarbero,
+  useCrearBarbero,
+  useRegistrarAdministradorComoBarbero,
+} from '../../hooks/useBarberos'
 import { useServicios } from '../../hooks/useServicios'
 import type { ApiError } from '../../types/error'
 import type { BarberoRequest } from '../../types/barbero'
@@ -67,8 +73,18 @@ export function BarberosPage() {
   const catalogo = useServicios()
   const alta = useCrearBarbero()
   const cambioEstado = useCambiarEstadoBarbero()
+  const altaAdministrador = useRegistrarAdministradorComoBarbero()
+  const { usuario } = useAuth()
+  const [nombrePublicoAdmin, setNombrePublicoAdmin] = useState('')
+  const [errorAdmin, setErrorAdmin] = useState<{ title: string; detail: string } | null>(null)
+  const [avisoAdmin, setAvisoAdmin] = useState(false)
   const [errorAlta, setErrorAlta] = useState<{ title: string; detail: string } | null>(null)
   const [altaCorrecta, setAltaCorrecta] = useState(false)
+
+  /** El administrador ya aparece en la lista cuando su cuenta tiene perfil. */
+  const adminYaEsBarbero = Boolean(
+    usuario && consulta.data?.some((barbero) => barbero.usuarioId === usuario.id),
+  )
 
   const {
     control,
@@ -145,6 +161,19 @@ export function BarberosPage() {
     }
   })
 
+  const agregarAdministrador = async () => {
+    setErrorAdmin(null)
+    try {
+      await altaAdministrador.mutateAsync({
+        nombrePublico: nombrePublicoAdmin.trim() || undefined,
+      })
+      setNombrePublicoAdmin('')
+      setAvisoAdmin(true)
+    } catch (error) {
+      setErrorAdmin(mensajeDeError(error, 'Intenta de nuevo en unos momentos.'))
+    }
+  }
+
   const confirmarCambioEstado = (id: string, nombre: string, activo: boolean) => {
     const proximoEstado = !activo
     const accion = proximoEstado ? 'activar' : 'desactivar'
@@ -175,6 +204,71 @@ export function BarberosPage() {
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-texto-suave sm:text-base">
           Administra perfiles y cuentas. Desactivar un perfil no cancela ni mueve sus citas.
         </p>
+
+        {!consulta.isPending && !consulta.isError && usuario && !adminYaEsBarbero && (
+          <section
+            aria-labelledby="admin-barbero-titulo"
+            className="mt-7 rounded-2xl border border-marca-900/20 bg-marca-50 p-4 sm:p-6"
+          >
+            <div className="flex items-start gap-3">
+              <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-marca-200 bg-superficie">
+                <UserPlus className="size-5 text-marca-700" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 id="admin-barbero-titulo" className="text-lg font-semibold text-texto">
+                  ¿Tú también atiendes en la silla?
+                </h2>
+                <p className="mt-1 text-sm text-texto-suave">
+                  Agrega tu cuenta de administrador como barbero. No se crea otro usuario ni otra contraseña:
+                  se reutiliza tu cuenta actual.
+                </p>
+              </div>
+            </div>
+
+            {errorAdmin && (
+              <div role="alert" className="mt-4 rounded-xl border border-error/30 bg-error/5 p-3.5 text-sm text-error">
+                <p className="font-semibold">{errorAdmin.title}</p>
+                <p className="mt-1">{errorAdmin.detail}</p>
+              </div>
+            )}
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="flex-1">
+                <label htmlFor="admin-nombre-publico" className={CLASE_ETIQUETA}>
+                  Cómo te verán los clientes (opcional)
+                </label>
+                <input
+                  id="admin-nombre-publico"
+                  maxLength={100}
+                  value={nombrePublicoAdmin}
+                  onChange={(evento) => setNombrePublicoAdmin(evento.target.value)}
+                  placeholder={usuario?.nombre ?? 'Tu nombre'}
+                  className={CLASE_ENTRADA}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => { void agregarAdministrador() }}
+                disabled={altaAdministrador.isPending}
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-marca-900 px-5 font-mono text-xs font-medium uppercase tracking-[0.14em] text-white transition-colors hover:bg-marca-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-900 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              >
+                {altaAdministrador.isPending ? (
+                  <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+                ) : (
+                  <UserPlus aria-hidden="true" className="size-4" />
+                )}
+                {altaAdministrador.isPending ? 'Agregando…' : 'Agregar mi cuenta'}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {avisoAdmin && (
+          <p role="status" className="mt-5 flex items-start gap-2 rounded-xl border border-marca-300 bg-superficie p-3.5 text-sm text-texto">
+            <BadgeCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-marca-700" />
+            Listo: tu cuenta de administrador ya aparece como barbero. Asígnale servicios más abajo.
+          </p>
+        )}
 
         <section aria-labelledby="alta-titulo" className="mt-7 rounded-2xl border border-marca-300 bg-superficie p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] sm:p-6">
           <div className="flex items-start gap-3">
