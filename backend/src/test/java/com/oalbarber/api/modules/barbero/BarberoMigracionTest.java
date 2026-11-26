@@ -39,13 +39,13 @@ class BarberoMigracionTest {
                 .locations("classpath:db/migration")
                 .load();
 
-        assertEquals(6, flyway.migrate().migrationsExecuted,
-                "La base vacía debe aplicar V1 a V6");
-        assertEquals(List.of("1", "2", "3", "4", "5", "6"),
+        assertEquals(8, flyway.migrate().migrationsExecuted,
+                "La base vacía debe aplicar V1 a V8");
+        assertEquals(List.of("1", "2", "3", "4", "5", "6", "7", "8"),
                 Arrays.stream(flyway.info().applied())
                         .map(migracion -> migracion.getVersion().getVersion())
                         .toList(),
-                "Flyway debe aplicar la secuencia V1 a V6");
+                "Flyway debe aplicar la secuencia V1 a V7");
     }
 
     @Test
