@@ -37,6 +37,21 @@ Horario de atención por barbero, almuerzo, bloqueos de franjas o fechas complet
 
 Aporta las reglas de tiempo que `cita` usa para calcular disponibilidad. La disponibilidad no se guarda aquí: se calcula al consultar. No cancela citas al crear un bloqueo; solo informa si hay citas afectadas para pedir confirmación.
 
+## Horario implementado (H-14)
+
+| Método y ruta | Rol | Uso |
+|---|---|---|
+| `GET /api/horarios?barberoId={id}` | ADMIN, BARBERO propio | Días configurados; los ausentes están cerrados. Sin `barberoId`, el administrador ve todos. |
+| `PUT /api/horarios/{barberoId}` | ADMIN | Reemplaza la semana completa; una lista vacía cierra la semana. |
+| `GET /api/horarios/{barberoId}/excepciones` | ADMIN, BARBERO propio | Fechas especiales del perfil. |
+| `PUT /api/horarios/{barberoId}/excepciones/{fecha}` | ADMIN | Crea o actualiza la fecha (`YYYY-MM-DD`). |
+| `DELETE /api/horarios/{barberoId}/excepciones/{fecha}` | ADMIN | Quita la excepción; responde 204 aunque no exista. |
+
+Reglas: una jornada continua por día entre 10:00 y 19:00 (RN-01), con almuerzo opcional dentro de
+la jornada (RN-02). El domingo no se configura en la semana; una fecha especial puede abrirlo,
+cerrarlo o cambiar sus horas. Los errores de validación responden 400 con `codigo` y el detalle en
+`errors`, con una clave por día (`"1"`…`"7"`) o por campo (`"fecha"`, `"horario"`).
+
 ## Requisitos del SRS
 
 RN-01, RN-02, RN-12, RN-18, RF-11 a RF-14

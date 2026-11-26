@@ -71,6 +71,35 @@ public class GlobalExceptionHandler {
         return detalle;
     }
 
+    /** Validación de negocio con detalle por fila (por ejemplo, un día del horario). */
+    @ExceptionHandler(ValidacionException.class)
+    public ProblemDetail validacionNegocio(ValidacionException ex, HttpServletRequest request) {
+        ProblemDetail detalle = problema(HttpStatus.BAD_REQUEST, "Revisa los datos enviados",
+                ex.getMessage(), ex.getCodigo(), request);
+        detalle.setProperty("errors", ex.getErrores());
+        return detalle;
+    }
+
+    /** Un JSON mal formado o una fecha/hora con formato inválido es un 400, no un 500. */
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ProblemDetail cuerpoIlegible(
+            org.springframework.http.converter.HttpMessageNotReadableException ex,
+            HttpServletRequest request) {
+        return problema(HttpStatus.BAD_REQUEST, "Datos inválidos",
+                "El cuerpo de la petición no tiene el formato esperado.",
+                "CUERPO_INVALIDO", request);
+    }
+
+    /** Un UUID o una fecha mal escritos en la ruta también son un 400. */
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ProblemDetail parametroInvalido(
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex,
+            HttpServletRequest request) {
+        return problema(HttpStatus.BAD_REQUEST, "Datos inválidos",
+                "El valor de la ruta no tiene el formato esperado.",
+                "PARAMETRO_INVALIDO", request);
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ProblemDetail integridad(DataIntegrityViolationException ex, HttpServletRequest request) {
         log.warn("Conflicto de integridad: {}", ex.getMostSpecificCause().getMessage());
