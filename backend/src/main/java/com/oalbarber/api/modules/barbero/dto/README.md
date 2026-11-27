@@ -8,7 +8,7 @@ Perfil profesional enlazado a una cuenta con rol `BARBERO` o `ADMINISTRADOR`. El
 
 ## Qué debe ir en esta carpeta
 
-- Los objetos de transferencia del módulo `barbero`: `BarberoRequest`, `CambiarEstadoBarberoRequest`, `BarberoPublicoResponse` y `BarberoAdminResponse`.
+- Los objetos de transferencia del módulo `barbero`: `BarberoRequest`, `CambiarEstadoBarberoRequest`, `BarberoServiciosRequest`, `BarberoPublicoResponse` y `BarberoAdminResponse`.
 - DTOs de entrada con Bean Validation (`@NotBlank`, `@NotNull`, `@Pattern` para celular internacional) y documentación Swagger con `@Schema`.
 - `BarberoPublicoResponse` no contiene datos personales de la cuenta; `BarberoAdminResponse` es para el panel y sí contiene nombre y celular. Ninguna respuesta incluye contraseñas ni hashes.
 - `BarberoRequest` limita `nombrePublico` a 100 caracteres y `descripcion` a 500. `foto` solo admite un nombre de archivo estático en minúsculas con extensión `.jpg`, `.jpeg`, `.png` o `.webp`, sin rutas.
@@ -34,4 +34,4 @@ Perfil profesional enlazado a una cuenta con rol `BARBERO` o `ADMINISTRADOR`. El
 ## Referencias
 
 - Requisitos relacionados del SRS: RF-10, RN-01, RN-12.
-- Relación con otros módulos: depende de `usuario` para el nombre y los datos de cuenta. La integración con servicios y citas todavía no está implementada.
+- Relación con otros módulos: depende de `usuario` para el nombre y datos de cuenta, y usa `ServicioService` para validar las asignaciones. `BarberoService` entrega `BarberoPublicoResponse` a `cita` para calcular disponibilidad; la consulta de citas futuras para retirar asignaciones sigue pendiente.

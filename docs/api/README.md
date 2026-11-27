@@ -43,3 +43,56 @@ perfil y `409` si algún ID no identifica un servicio activo. `GET /api/barberos
 La consulta de citas futuras afectadas al quitar una asignación todavía no está implementada:
 depende del módulo `cita`. El endpoint no muestra ni simula ese aviso. Ver la
 [matriz de trazabilidad H-13](../seguimiento/trazabilidad-H-13.md).
+
+## Disponibilidad
+
+### Consultar horarios disponibles
+
+`GET /api/disponibilidad` es público y corresponde a la consulta de disponibilidad de H-01 (endpoint
+19), RF-15 y RF-16. Calcula los turnos al momento de la consulta; no almacena ni mueve citas.
+
+| Parámetro | Obligatorio | Formato | Descripción |
+|---|---|---|---|
+| `servicioId` | Sí | UUID | Servicio activo del catálogo. |
+| `fecha` | Sí | `AAAA-MM-DD` | Fecha local en `America/Bogota`. |
+| `barberoId` | No | UUID | Barbero solicitado. Si se omite, busca cualquier barbero activo que ofrezca el servicio. |
+
+Ejemplo sin barbero específico:
+
+```bash
+curl "http://localhost:8080/api/disponibilidad?servicioId=9a7c1e2d-4b3f-4a6e-8c1d-2f5a7b9c0d1e&fecha=2026-11-28"
+```
+
+Ejemplo de respuesta `200`:
+
+```json
+[
+  {
+    "inicio": "2026-11-28T10:00:00-05:00",
+    "fin": "2026-11-28T10:40:00-05:00",
+    "barberoId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+  },
+  {
+    "inicio": "2026-11-28T10:40:00-05:00",
+    "fin": "2026-11-28T11:20:00-05:00",
+    "barberoId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+  }
+]
+```
+
+El `fin` refleja la duración exacta del servicio. Los turnos se generan cada 40 minutos desde el
+inicio de cada hueco libre; se permite que un turno termine exactamente al cierre. “Cualquiera”
+devuelve inicios únicos y asigna los repetidos al barbero con menos citas vigentes ese día, con UUID
+menor como desempate. Los límites se calculan desde el instante actual: al menos 24 horas y hasta
+168 horas adelante. Las fechas fuera de ese rango o sin huecos responden `200` con `[]`.
+
+| Estado | Causa | Respuesta |
+|---|---|---|
+| `400` | Falta `servicioId` o `fecha`, o UUID/fecha tiene formato inválido. | `ProblemDetail`, con campo en `errors`. |
+| `404` | El servicio no existe o está inactivo. | `ProblemDetail`. |
+| `409` | El `barberoId` indicado no existe, está inactivo o no ofrece el servicio. | `ProblemDetail`. |
+
+La franja de almuerzo solo se descuenta cuando el horario la tiene configurada. La hora y duración
+siguen pendientes de confirmación (P-01). La interpretación del cierre, el límite de siete días y
+la asignación de “cualquiera” se documentan en el
+[ADR-0004](../decisiones/ADR-0004-calculo-de-disponibilidad.md).

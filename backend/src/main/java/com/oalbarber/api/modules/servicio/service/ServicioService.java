@@ -32,6 +32,16 @@ public class ServicioService {
         return servicios.stream().map(servicioMapper::toResponse).toList();
     }
 
+    /** Obtiene un servicio activo para que cita use su duracion sin acceder al repositorio ajeno. */
+    @Transactional(readOnly = true)
+    public ServicioResponse obtenerActivo(UUID id) {
+        Servicio servicio = servicioRepository.findById(id)
+                .filter(Servicio::isActivo)
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "No existe un servicio activo con el identificador indicado."));
+        return servicioMapper.toResponse(servicio);
+    }
+
     @Transactional
     public ServicioResponse crear(ServicioRequest peticion) {
         String nombre = peticion.getNombre().trim();

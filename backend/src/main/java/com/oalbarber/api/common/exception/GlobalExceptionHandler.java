@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -71,6 +73,21 @@ public class GlobalExceptionHandler {
         return detalle;
     }
 
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ProblemDetail parametroObligatorioAusente(
+            MissingServletRequestParameterException ex, HttpServletRequest request) {
+        return errorParametro(ex.getParameterName(), "El campo es obligatorio.", request);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ProblemDetail formatoParametroInvalido(
+            MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        String mensaje = "fecha".equals(ex.getName())
+                ? "Debe tener formato AAAA-MM-DD."
+                : "Debe ser un identificador UUID válido.";
+        return errorParametro(ex.getName(), mensaje, request);
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ProblemDetail integridad(DataIntegrityViolationException ex, HttpServletRequest request) {
         log.warn("Conflicto de integridad: {}", ex.getMostSpecificCause().getMessage());
@@ -104,5 +121,12 @@ public class GlobalExceptionHandler {
         detalleProblema.setInstance(URI.create(request.getRequestURI()));
         detalleProblema.setProperty("codigo", codigo);
         return detalleProblema;
+    }
+
+    private ProblemDetail errorParametro(String campo, String mensaje, HttpServletRequest request) {
+        ProblemDetail detalle = problema(HttpStatus.BAD_REQUEST, "Parámetro inválido",
+                "Revisa los parámetros de la solicitud.", "VALIDACION", request);
+        detalle.setProperty("errors", Map.of(campo, mensaje));
+        return detalle;
     }
 }

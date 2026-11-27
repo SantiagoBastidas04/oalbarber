@@ -78,6 +78,7 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/barberos").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/barberos/*/servicios").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/disponibilidad").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/barberos/**").authenticated()
                         // Entradas a la sesión: públicas porque aún no hay con qué autenticarse.
                         .requestMatchers(HttpMethod.POST, "/api/auth/registro", "/api/auth/login",

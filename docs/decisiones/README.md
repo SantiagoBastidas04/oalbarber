@@ -29,9 +29,11 @@ Decisiones que ya se conocen y merecen un ADR al implementarse:
 - [ADR-0001: UUID en identidades y perfiles](ADR-0001-uuid-en-identidades.md) — aceptado para
   `usuario`, `sesion_refresco` y `barbero`; no define el ID del catálogo de servicios.
 - [ADR-0002: asignación barbero-servicio y consulta de citas futuras](ADR-0002-asignacion-barbero-servicio-y-consulta-citas.md)
-  — relación implementada; integración con disponibilidad y consulta de citas pendientes.
+  — disponibilidad integrada en PB-22; sigue pendiente el aviso de citas futuras al quitar una asignación.
 - [ADR-0003: el perfil de barbero del administrador es opcional](ADR-0003-administrador-como-barbero-opcional.md)
   — el administrador se agrega explícitamente y se reutiliza su cuenta existente.
+- [ADR-0004: cálculo de disponibilidad de citas](ADR-0004-calculo-de-disponibilidad.md)
+  — reglas de cálculo, desempate de “cualquiera” y decisiones de PB-22.
 
 ## Qué NO va aquí
 

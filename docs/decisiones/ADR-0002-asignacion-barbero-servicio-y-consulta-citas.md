@@ -1,15 +1,15 @@
 # ADR-0002: Asignación barbero-servicio y consulta de citas futuras
 
 - **Fecha:** 2026-11-15
-- **Estado:** aceptado parcialmente; la relación barbero-servicio está implementada y la integración con citas sigue pendiente
-- **Última revisión:** 2026-11-15
+- **Estado:** aceptado parcialmente; relación y disponibilidad implementadas, aviso por citas futuras pendiente
+- **Última revisión:** 2026-11-25
 
 ## Contexto
 
 La aplicación necesita expresar qué servicios ofrece cada perfil y, al quitar una asignación,
 consultar si hay citas futuras que puedan verse afectadas. El catálogo ya implementa servicios con
-UUID y el módulo `barbero` puede administrar sus asignaciones. El módulo `cita` y el cálculo de
-disponibilidad todavía no están disponibles en esta rama.
+UUID y el módulo `barbero` puede administrar sus asignaciones. En la fecha de esta decisión, el
+módulo `cita` y el cálculo de disponibilidad todavía no estaban disponibles.
 
 ## Decisión
 
@@ -29,16 +29,20 @@ ofrecen un servicio. La API y `/panel/barberos` permiten consultar y modificar e
 
 ## Pendiente
 
-- **Criterio 3 de H-13:** integrar las operaciones de `BarberoService` con la selección de barbero
-  y la validación de disponibilidad dentro del módulo `cita`.
 - **Criterio 4 de H-13:** antes de quitar una asignación, consultar las citas futuras afectadas y
   devolver al panel la información necesaria para pedir confirmación. No cancelar ni mover citas
   automáticamente.
 
-Cuando exista `cita`, se propone declarar en `barbero` un puerto como
-`ConsultaCitasFuturas` y hacer que `cita` lo implemente. Su firma deberá usar los tipos reales del
-módulo y comunicar las citas confirmadas futuras afectadas por `(barberoId, servicioId)`. No se
-implementan todavía el puerto, la confirmación ni los errores asociados.
+El puerto `ConsultaCitasFuturas` todavía no se implementa; su firma deberá comunicar las citas
+confirmadas futuras afectadas por `(barberoId, servicioId)` sin hacer que `barbero` acceda a
+repositorios de `cita`.
+
+## Actualización 2026-11-25
+
+PB-22 integró `BarberoService` con `DisponibilidadService`: la selección “cualquiera” solo considera
+perfiles activos que ofrecen el servicio, y la consulta explícita valida esa asignación. El
+criterio 3 de H-13 queda cubierto para disponibilidad; la creación de citas y el aviso del criterio
+4 siguen pendientes. Ver [ADR-0004](ADR-0004-calculo-de-disponibilidad.md).
 
 ## Alternativas consideradas
 
@@ -54,5 +58,5 @@ implementan todavía el puerto, la confirmación ni los errores asociados.
 - La clave compuesta impide duplicar una asignación y las claves foráneas protegen ambos perfiles
   de datos.
 - El catálogo debe seguir consultándose mediante su service.
-- H-13 no se puede cerrar mientras los criterios 3 y 4 sigan pendientes; ver la
+- H-13 no se puede cerrar mientras el criterio 4 siga pendiente; ver la
   [matriz de trazabilidad](../seguimiento/trazabilidad-H-13.md).
