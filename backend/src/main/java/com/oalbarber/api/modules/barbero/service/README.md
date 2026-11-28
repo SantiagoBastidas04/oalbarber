@@ -8,7 +8,7 @@ Perfil profesional enlazado a una cuenta con rol `BARBERO` o `ADMINISTRADOR`.
 
 ## Qué debe ir en esta carpeta
 
-- La lógica del módulo `barbero`: `BarberoService`, creación de perfiles, listados y cambio de estado. Disponibilidad y asignación de servicios todavía no están implementadas.
+- La lógica del módulo `barbero`: `BarberoService`, creación de perfiles, listados, cambio de estado y asignación de servicios. Para disponibilidad, el service entrega DTOs públicos de barberos activos que ofrecen el servicio.
 - Métodos públicos con Javadoc en español, indicando qué regla del SRS aplican y qué excepciones de negocio lanzan.
 - Transacciones con `@Transactional` en los métodos que modifican datos; lecturas con `@Transactional(readOnly = true)` cuando corresponda.
 - Uso de excepciones propias del dominio (`RecursoNoEncontradoException`, `HorarioNoDisponibleException`, etc.), nunca `null` ni códigos de error ambiguos.
@@ -43,6 +43,8 @@ Perfil profesional enlazado a una cuenta con rol `BARBERO` o `ADMINISTRADOR`.
 - La lista pública incluye solo perfiles activos y nunca expone nombre ni celular de la cuenta.
 - El listado administrativo incluye perfiles activos e inactivos y datos de cuenta.
 - Un perfil inactivo no debe aparecer en la disponibilidad; las consultas deben aplicar el filtro.
+- `listarActivosQueOfrecenServicio` valida el servicio activo y devuelve DTOs, sin exponer entidades JPA al módulo `cita`.
+- `DisponibilidadService` consume esta consulta para PB-22. La consulta de citas futuras antes de retirar una asignación sigue pendiente.
 
 ## Referencias
 

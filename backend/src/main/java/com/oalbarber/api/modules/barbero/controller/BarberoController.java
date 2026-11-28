@@ -165,12 +165,12 @@ public class BarberoController {
         return barberoService.listarServiciosPublicosDe(id);
     }
 
-    /** Reemplaza las asignaciones. El aviso por citas futuras queda pendiente del módulo cita. */
+    /** Reemplaza las asignaciones; el aviso por citas futuras queda pendiente de otra historia. */
     @Operation(summary = "Reemplazar servicios de un barbero",
             description = "Solo ADMINISTRADOR. La lista puede estar vacía para quitar todos los "
                     + "servicios; todos los UUID deben identificar servicios activos. "
                     + "Limitación de H-13: todavía no se consulta si quitar un servicio afecta "
-                    + "citas futuras (criterio 4), porque el módulo cita no existe.")
+                    + "citas futuras afectadas (criterio 4 de H-13), que queda pendiente.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Asignaciones actualizadas"),
             @ApiResponse(responseCode = "400", description = "Lista ausente, nula o con UUIDs duplicados",

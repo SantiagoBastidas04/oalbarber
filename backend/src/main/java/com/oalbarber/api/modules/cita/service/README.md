@@ -32,17 +32,19 @@ Cálculo de disponibilidad, creación y cancelación de citas, estados (CONFIRMA
 
 ## Detalle de este módulo
 
-- `DisponibilidadService` calcula los huecos libres de un barbero a partir del horario, el
-  almuerzo, los bloqueos y las citas; ofrece turnos cada 40 minutos desde el inicio de cada hueco
-  (RN-07) y descarta los que no terminan antes de las 19:00.
-- `CitaService` crea citas validando anticipación mínima (24 h), máximo de días (7), duración,
-  solapamiento y canal; copia duración y precio del servicio (RN-16) y guarda inicio/fin exactos.
-- `CitaService` cancela respetando el límite de 2 horas (RN-09) y cambia el estado a `CANCELADA`
-  sin borrar la fila; también registra las transiciones a `COMPLETADA` y `NO_ASISTIO`.
-- Los métodos reciben `canal` como parámetro; no leen `HttpServletRequest` ni el
-  `SecurityContext`. El controlador traduce la identidad autenticada a `clienteId`.
-- La creación es transaccional y compite a nivel de base: si la restricción de exclusión rechaza
-  la inserción, se lanza `HorarioNoDisponibleException` y el cliente recibe horarios actualizados.
+- `DisponibilidadService` consulta `ServicioService`, `BarberoService` y `HorarioService`, y usa
+  `CitaService` para leer ocupaciones en lote. Devuelve turnos únicos por inicio para un barbero o
+  para “cualquiera”.
+- `CalculadorHuecos` es una clase pura: resta almuerzo, bloqueos, citas y margen con intervalos
+  semiabiertos; cuenta turnos cada 40 minutos desde cada hueco y permite terminar exactamente al
+  cierre. La anticipación y el máximo de días se leen de `configuracion`.
+- `CitaService` implementa actualmente la lectura por lote de citas vigentes para disponibilidad.
+  La creación, cancelación y transiciones de estado quedan para otras historias.
+- La lógica de disponibilidad no depende de HTTP ni del `SecurityContext`; el endpoint público
+  `GET /api/disponibilidad` solo adapta parámetros y devuelve `DisponibilidadResponse`.
+- La disponibilidad se calcula en cada consulta, no mueve citas existentes y consulta a través de
+  los services propietarios de cada módulo. El detalle de las decisiones está en
+  [ADR-0004](../../../../../../../../../../docs/decisiones/ADR-0004-calculo-de-disponibilidad.md).
 
 ## Referencias
 

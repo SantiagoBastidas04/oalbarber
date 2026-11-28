@@ -6,6 +6,9 @@
 |---|---|
 | [`modelo-datos.md`](modelo-datos.md) | Diagrama entidad-relación, reglas de integridad, flujo de una reserva y pendientes del modelo. |
 
+Las decisiones sobre el cálculo de agenda se registran en el
+[ADR-0004](../decisiones/ADR-0004-calculo-de-disponibilidad.md).
+
 ## Qué va aquí
 
 - La descripción del **monolito modular**: módulos `auth`, `usuario`, `barbero`, `servicio`,

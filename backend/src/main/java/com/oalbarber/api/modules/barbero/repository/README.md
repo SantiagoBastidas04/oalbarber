@@ -8,7 +8,7 @@ Repositorio de perfiles profesionales enlazados a usuarios con rol `BARBERO` o `
 
 ## Qué debe ir en esta carpeta
 
-- Interfaces Spring Data JPA del módulo `barbero`: `BarberoRepository`.
+- Interfaces Spring Data JPA del módulo `barbero`: `BarberoRepository` y `BarberoServicioRepository`.
 - Métodos derivados con nombres claros (`findByActivoTrue`, `findByUsuarioId`, `existsByUsuarioId`).
 - Consultas `@Query` solo cuando el nombre derivado no alcance; siempre con parámetros nombrados y sin concatenar SQL.
 - Proyecciones o DTOs de consulta cuando se necesite leer solo unas columnas.
@@ -31,12 +31,12 @@ Repositorio de perfiles profesionales enlazados a usuarios con rol `BARBERO` o `
 
 ## Detalle de este módulo
 
-- `BarberoRepository extends JpaRepository<Barbero, UUID>`.
-- Consultas previstas: `findByActivoTrue`, `findByUsuarioId`, `existsByUsuarioId`.
+- `BarberoRepository extends JpaRepository<Barbero, UUID>` y resuelve perfiles por estado o usuario.
+- `BarberoServicioRepository extends JpaRepository<BarberoServicio, BarberoServicioId>` consulta y modifica la asignación compuesta entre barberos y servicios.
 - La relación con `usuario` se resuelve en el service de `barbero` o en el mapper, no con una
   consulta cruzada desde otro módulo.
 
 ## Referencias
 
 - Requisitos relacionados del SRS: RF-10, RN-01, RN-12.
-- La tabla actual solo contiene el perfil y el UUID de su usuario; los repositorios de relación con servicios y citas todavía no están implementados.
+- Los repositorios de este módulo no consultan tablas de `servicio` ni de `cita`; cada dato se obtiene mediante el service propietario.

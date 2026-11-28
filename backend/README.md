@@ -6,10 +6,14 @@ de WhatsApp sin rehacer la arquitectura.
 
 ## Estado actual
 
-Solo hay **estructura, configuración y documentación**. No hay entidades, controladores, services
-ni repositorios implementados: cada carpeta tiene un `README.md` con lo que debe ir y lo que no.
-La única clase de código es `config/SecurityConfig`, necesaria para que el health check del
-contenedor funcione.
+El backend ya implementa autenticación y usuarios, catálogo de servicios, perfiles y asignaciones
+de barberos, y el motor de disponibilidad PB-22. Flyway crea el esquema hasta V9; los horarios,
+bloqueos y citas se consultan mediante los services de sus módulos. `GET /api/disponibilidad` es
+público y devuelve turnos calculados al consultar.
+
+La creación y cancelación de citas, y los controladores/CRUD de horarios y bloqueos, siguen fuera
+del alcance implementado. El almuerzo tampoco tiene una franja predeterminada: solo se descuenta
+cuando se configura en `horario_atencion`.
 
 ## Requisitos
 

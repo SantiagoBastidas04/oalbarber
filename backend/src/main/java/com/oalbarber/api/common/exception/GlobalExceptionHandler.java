@@ -7,8 +7,11 @@ import java.util.Map;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -81,23 +84,27 @@ public class GlobalExceptionHandler {
     }
 
     /** Un JSON mal formado o una fecha/hora con formato inválido es un 400, no un 500. */
-    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
-    public ProblemDetail cuerpoIlegible(
-            org.springframework.http.converter.HttpMessageNotReadableException ex,
-            HttpServletRequest request) {
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ProblemDetail cuerpoIlegible(HttpMessageNotReadableException ex,
+                                        HttpServletRequest request) {
         return problema(HttpStatus.BAD_REQUEST, "Datos inválidos",
                 "El cuerpo de la petición no tiene el formato esperado.",
                 "CUERPO_INVALIDO", request);
     }
 
-    /** Un UUID o una fecha mal escritos en la ruta también son un 400. */
-    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
-    public ProblemDetail parametroInvalido(
-            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex,
-            HttpServletRequest request) {
-        return problema(HttpStatus.BAD_REQUEST, "Datos inválidos",
-                "El valor de la ruta no tiene el formato esperado.",
-                "PARAMETRO_INVALIDO", request);
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ProblemDetail parametroObligatorioAusente(
+            MissingServletRequestParameterException ex, HttpServletRequest request) {
+        return errorParametro(ex.getParameterName(), "El campo es obligatorio.", "VALIDACION", request);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ProblemDetail formatoParametroInvalido(
+            MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        String mensaje = "fecha".equals(ex.getName())
+                ? "Debe tener formato AAAA-MM-DD."
+                : "Debe ser un identificador UUID válido.";
+        return errorParametro(ex.getName(), mensaje, "PARAMETRO_INVALIDO", request);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -133,5 +140,13 @@ public class GlobalExceptionHandler {
         detalleProblema.setInstance(URI.create(request.getRequestURI()));
         detalleProblema.setProperty("codigo", codigo);
         return detalleProblema;
+    }
+
+    private ProblemDetail errorParametro(String campo, String mensaje, String codigo,
+                                         HttpServletRequest request) {
+        ProblemDetail detalle = problema(HttpStatus.BAD_REQUEST, "Parámetro inválido",
+                "Revisa los parámetros de la solicitud.", codigo, request);
+        detalle.setProperty("errors", Map.of(campo, mensaje));
+        return detalle;
     }
 }

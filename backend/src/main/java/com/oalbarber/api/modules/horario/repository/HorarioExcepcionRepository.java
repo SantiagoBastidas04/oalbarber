@@ -2,6 +2,7 @@ package com.oalbarber.api.modules.horario.repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,6 +15,8 @@ public interface HorarioExcepcionRepository extends JpaRepository<HorarioExcepci
     List<HorarioExcepcion> findByBarberoIdOrderByFechaAsc(UUID barberoId);
 
     Optional<HorarioExcepcion> findByBarberoIdAndFecha(UUID barberoId, LocalDate fecha);
+
+    List<HorarioExcepcion> findByBarberoIdInAndFecha(Collection<UUID> barberoIds, LocalDate fecha);
 
     void deleteByBarberoIdAndFecha(UUID barberoId, LocalDate fecha);
 }

@@ -2,12 +2,15 @@ package com.oalbarber.api.modules.horario.service;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -18,13 +21,19 @@ import com.oalbarber.api.common.exception.ValidacionException;
 import com.oalbarber.api.modules.barbero.repository.BarberoRepository;
 import com.oalbarber.api.modules.horario.domain.HorarioAtencion;
 import com.oalbarber.api.modules.horario.domain.HorarioExcepcion;
+import com.oalbarber.api.modules.horario.domain.Bloqueo;
+import com.oalbarber.api.modules.horario.domain.Configuracion;
+import com.oalbarber.api.modules.horario.dto.BloqueoResponse;
 import com.oalbarber.api.modules.horario.dto.HorarioDiaRequest;
 import com.oalbarber.api.modules.horario.dto.HorarioDiaResponse;
 import com.oalbarber.api.modules.horario.dto.HorarioExcepcionRequest;
 import com.oalbarber.api.modules.horario.dto.HorarioExcepcionResponse;
 import com.oalbarber.api.modules.horario.dto.HorarioSemanaRequest;
+import com.oalbarber.api.modules.horario.dto.ParametrosDisponibilidadResponse;
 import com.oalbarber.api.modules.horario.repository.HorarioAtencionRepository;
 import com.oalbarber.api.modules.horario.repository.HorarioExcepcionRepository;
+import com.oalbarber.api.modules.horario.repository.BloqueoRepository;
+import com.oalbarber.api.modules.horario.repository.ConfiguracionRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -48,6 +57,8 @@ public class HorarioService {
     private final HorarioAtencionRepository horarioRepository;
     private final HorarioExcepcionRepository excepcionRepository;
     private final BarberoRepository barberoRepository;
+    private final BloqueoRepository bloqueoRepository;
+    private final ConfiguracionRepository configuracionRepository;
 
     /**
      * Devuelve el horario de un barbero o, si no se indica, el de todos
@@ -70,6 +81,59 @@ public class HorarioService {
             throw new AccessDeniedException("Solo puedes consultar tu propio horario.");
         }
         return diasDe(propio);
+    }
+
+    /** Datos internos por lote para el cálculo público de disponibilidad. */
+    @Transactional(readOnly = true)
+    public List<HorarioDiaResponse> listarParaDisponibilidad(Collection<UUID> barberoIds,
+                                                              int diaSemana) {
+        if (barberoIds == null || barberoIds.isEmpty()) {
+            return List.of();
+        }
+        return horarioRepository.findByBarberoIdInAndDiaSemana(barberoIds, (short) diaSemana)
+                .stream().map(this::aResponse).toList();
+    }
+
+    /** Devuelve solo las excepciones de la fecha consultada, sin exponerlas por el endpoint público. */
+    @Transactional(readOnly = true)
+    public List<HorarioExcepcionResponse> listarExcepcionesParaDisponibilidad(
+            Collection<UUID> barberoIds, LocalDate fecha) {
+        if (barberoIds == null || barberoIds.isEmpty()) {
+            return List.of();
+        }
+        return excepcionRepository.findByBarberoIdInAndFecha(barberoIds, fecha)
+                .stream().map(this::aResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<BloqueoResponse> listarBloqueosParaDisponibilidad(
+            Collection<UUID> barberoIds, Instant inicio, Instant fin) {
+        if (barberoIds == null || barberoIds.isEmpty()) {
+            return List.of();
+        }
+        return bloqueoRepository.buscarCruces(barberoIds, inicio, fin).stream()
+                .map(bloqueo -> new BloqueoResponse(bloqueo.getId(), bloqueo.getBarberoId(),
+                        bloqueo.getInicio(), bloqueo.getFin()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ParametrosDisponibilidadResponse obtenerParametrosDisponibilidad() {
+        Map<String, String> valores = configuracionRepository.findAll().stream()
+                .collect(Collectors.toMap(Configuracion::getClave, Configuracion::getValor));
+        return new ParametrosDisponibilidadResponse(
+                parametro(valores, "anticipacion_minima_horas"),
+                parametro(valores, "maximo_dias_adelante"),
+                parametro(valores, "intervalo_turnos_minutos"),
+                parametro(valores, "margen_entre_citas_minutos"));
+    }
+
+    private static int parametro(Map<String, String> valores, String clave) {
+        String valor = valores.get(clave);
+        if (valor == null) {
+            throw new IllegalStateException("Falta el parámetro RN-18 " + clave + " en configuracion.");
+        }
+        return Integer.parseInt(valor);
     }
 
     /**

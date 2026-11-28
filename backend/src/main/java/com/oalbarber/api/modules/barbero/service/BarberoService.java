@@ -215,7 +215,7 @@ public class BarberoService {
 
     /** Lista perfiles activos que ofrecen un servicio activo del catálogo. */
     @Transactional(readOnly = true)
-    public List<Barbero> listarActivosQueOfrecenServicio(UUID servicioId) {
+    public List<BarberoPublicoResponse> listarActivosQueOfrecenServicio(UUID servicioId) {
         boolean servicioActivo = servicioService.listar(false).stream()
                 .anyMatch(servicio -> servicio.getId().equals(servicioId));
         if (!servicioActivo) {
@@ -228,6 +228,7 @@ public class BarberoService {
                 .toList();
         return barberoRepository.findAllById(idsBarberos).stream()
                 .filter(Barbero::isActivo)
+                .map(barberoMapper::aPublico)
                 .toList();
     }
 

@@ -13,6 +13,7 @@ Perfil profesional enlazado a una cuenta con rol `BARBERO` o `ADMINISTRADOR`. El
 - Métodos que reciben DTOs de entrada con `@Valid`, delegan en `BarberoService` y devuelven DTOs de salida o `ResponseEntity` con el código HTTP correcto.
 - Autorización administrativa con `@PreAuthorize("hasRole('ADMINISTRADOR')")`. El controlador decide quién puede llamar; el service no conoce roles HTTP.
 - `GET /api/barberos` es público y devuelve solo perfiles activos con `BarberoPublicoResponse`.
+- `GET /api/barberos/{id}/servicios` es público; `PUT /api/barberos/{id}/servicios` reemplaza las asignaciones y requiere `ADMINISTRADOR`.
 - `GET /api/barberos/admin`, `POST /api/barberos` y `PATCH /api/barberos/{id}/estado` son exclusivos de `ADMINISTRADOR`; las respuestas administrativas usan `BarberoAdminResponse`.
 - El cambio de estado solo altera el perfil: conserva activa la cuenta del usuario y sus sesiones.
 - Documentación de cada endpoint visible en Swagger UI, con sus respuestas y errores `ProblemDetail`.
@@ -35,6 +36,6 @@ Perfil profesional enlazado a una cuenta con rol `BARBERO` o `ADMINISTRADOR`. El
 
 ## Referencias
 
-- `GET/PUT /api/barberos/{id}/servicios` no está implementado; requiere integrar los módulos de servicios y citas.
+- Antes de retirar una asignación todavía se debe consultar si hay citas futuras afectadas; ese aviso queda pendiente de otra historia.
 - Requisitos relacionados del SRS: RF-10, RN-01, RN-12.
 - Relación con otros módulos: delega la creación y consulta de cuentas en `BarberoService`/`UsuarioService`; las respuestas públicas no revelan datos personales de la cuenta.

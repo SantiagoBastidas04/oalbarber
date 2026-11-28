@@ -21,6 +21,7 @@ import jakarta.persistence.PersistenceContext;
 import com.oalbarber.api.common.exception.RecursoNoEncontradoException;
 import com.oalbarber.api.common.exception.ReglaNegocioException;
 import com.oalbarber.api.modules.barbero.domain.Barbero;
+import com.oalbarber.api.modules.barbero.dto.BarberoPublicoResponse;
 import com.oalbarber.api.modules.barbero.service.BarberoService;
 import com.oalbarber.api.modules.servicio.dto.ServicioResponse;
 
@@ -144,7 +145,7 @@ class BarberoAsignacionIntegrationTest {
         jdbcTemplate.update("UPDATE barbero SET activo = false WHERE id = ?", BARBERO_DOS_ID);
 
         assertThat(barberoService.listarActivosQueOfrecenServicio(SERVICIO_UNO_ID))
-                .extracting(Barbero::getId)
+                .extracting(BarberoPublicoResponse::id)
                 .containsExactly(BARBERO_UNO_ID);
         assertThat(barberoService.listarActivosQueOfrecenServicio(SERVICIO_DOS_ID)).isEmpty();
         assertThat(barberoService.listarActivosQueOfrecenServicio(SERVICIO_INACTIVO_ID)).isEmpty();

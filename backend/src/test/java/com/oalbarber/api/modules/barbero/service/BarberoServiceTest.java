@@ -341,8 +341,11 @@ class BarberoServiceTest {
                 BarberoServicio.crear(BARBERO_INACTIVO_ID, SERVICIO_UNO_ID)));
         when(barberoRepository.findAllById(List.of(BARBERO_ID, BARBERO_INACTIVO_ID)))
                 .thenReturn(List.of(activo, inactivo));
+        BarberoPublicoResponse respuesta = new BarberoPublicoResponse(
+                BARBERO_ID, "Barbero público", null, null, true);
+        when(barberoMapper.aPublico(activo)).thenReturn(respuesta);
 
-        assertEquals(List.of(activo),
+        assertEquals(List.of(respuesta),
                 barberoService.listarActivosQueOfrecenServicio(SERVICIO_UNO_ID));
         assertTrue(barberoService.listarActivosQueOfrecenServicio(SERVICIO_DOS_ID).isEmpty());
     }

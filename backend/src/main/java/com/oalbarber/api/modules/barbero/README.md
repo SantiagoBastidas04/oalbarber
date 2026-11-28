@@ -45,10 +45,11 @@ endpoint administrativo `PUT /api/barberos/{id}/servicios` reemplaza la lista co
 quitar todos los servicios con una lista vacía. `GET /api/barberos/admin` devuelve `servicioIds`
 para todos los perfiles.
 
-`listarActivosQueOfrecenServicio` y `ofreceServicio` cubren la consulta del lado `barbero` para
-disponibilidad. Su integración en el flujo de reserva, junto con el aviso por citas futuras antes
-de quitar una asignación, sigue pendiente de que exista el módulo `cita`. El diseño previsto está
-en [ADR-0002](../../../../../../../../../docs/decisiones/ADR-0002-asignacion-barbero-servicio-y-consulta-citas.md).
+`listarActivosQueOfrecenServicio` devuelve DTOs públicos y `ofreceServicio` valida la asignación.
+`DisponibilidadService` del módulo `cita` consume esta consulta para PB-22. Sigue pendiente avisar
+de las citas futuras afectadas antes de quitar una asignación; no se cancelan ni reubican
+automáticamente. Ver [ADR-0002](../../../../../../../../../docs/decisiones/ADR-0002-asignacion-barbero-servicio-y-consulta-citas.md)
+y [ADR-0004](../../../../../../../../../docs/decisiones/ADR-0004-calculo-de-disponibilidad.md).
 
 ## Requisitos del SRS
 

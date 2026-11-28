@@ -1,17 +1,15 @@
 # Modelo de datos OalBarber
 
-**Estado:** modelo de cuentas, catálogo, perfiles, asignaciones y horarios implementado en V1–V8;
-bloqueos y citas siguen pendientes. **Última revisión:** 2026-11-24. El SRS se conserva sin cambios.
+**Estado:** esquema implementado por Flyway en V1–V11. Incluye cuentas, catálogo, perfiles,
+asignaciones, horarios semanales, excepciones, bloqueos, configuración y citas. El SRS se conserva
+sin cambios. **Última revisión:** 2026-11-26.
 
 ## Tablas implementadas
 
-Las migraciones crean `usuario` (V1), `sesion_refresco` (V2), `servicio` (V3), `barbero` (V4),
-`barbero_servicio` (V5), `horario_atencion` (V7) y `horario_excepcion` (V8). V6 añade
-`barbero.fecha_creacion`. Los identificadores de estas tablas son UUID. V4 crea únicamente
-`barbero`, con `usuario_id` único, FK a `usuario(id)` y `ON DELETE RESTRICT`. V5 enlaza barbero y
-servicio con una clave primaria compuesta, dos FKs con `ON DELETE RESTRICT`, `creado_en` y un
-índice para `servicio_id`. V7 guarda una jornada continua por día y barbero, con almuerzo opcional;
-V8 añade fechas especiales que abren, cierran o cambian el horario de una fecha concreta.
+Las migraciones V1–V8 de `develop` se conservan: `usuario` (V1), `sesion_refresco` (V2), `servicio`
+(V3), `barbero` (V4), `barbero_servicio` (V5), `barbero.fecha_creacion` (V6), `horario_atencion`
+(V7) y `horario_excepcion` (V8). PB-22 añade `bloqueo` y `configuracion` (V9), `cita` (V10) y el
+catálogo provisional (V11). Todos los identificadores de las entidades son UUID.
 
 ```mermaid
 erDiagram
@@ -24,7 +22,6 @@ erDiagram
         boolean activo
         timestamptz fecha_creacion
     }
-
     sesion_refresco {
         uuid id PK
         uuid usuario_id FK
@@ -38,7 +35,6 @@ erDiagram
         timestamptz fecha_revocacion
         uuid reemplazado_por_id FK
     }
-
     servicio {
         uuid id PK
         varchar nombre UK
@@ -48,7 +44,6 @@ erDiagram
         varchar imagen
         boolean activo
     }
-
     barbero {
         uuid id PK
         uuid usuario_id FK, UK
@@ -58,23 +53,20 @@ erDiagram
         boolean activo
         timestamptz fecha_creacion
     }
-
     barbero_servicio {
         uuid barbero_id PK, FK
         uuid servicio_id PK, FK
         timestamptz creado_en
     }
-
     horario_atencion {
         uuid id PK
         uuid barbero_id FK
-        smallint dia_semana "1 lunes ... 6 sábado"
+        smallint dia_semana "ISO 1=lunes ... 7=domingo"
         time hora_inicio
         time hora_fin
         time almuerzo_inicio
         time almuerzo_fin
     }
-
     horario_excepcion {
         uuid id PK
         uuid barbero_id FK
@@ -85,79 +77,78 @@ erDiagram
         time almuerzo_inicio
         time almuerzo_fin
     }
-
-    usuario ||--o{ sesion_refresco : "sesiones"
-    sesion_refresco o|--o| sesion_refresco : "reemplaza"
-    usuario ||--o| barbero : "perfil profesional"
-    barbero ||--o{ barbero_servicio : "ofrece"
-    servicio ||--o{ barbero_servicio : "asignado a"
-    barbero ||--o{ horario_atencion : "atiende"
-    barbero ||--o{ horario_excepcion : "fechas especiales"
-```
-
-`barbero` es un perfil separado de la identidad. El nombre, celular y credenciales permanecen en
-`usuario`; el perfil guarda presentación pública, estado profesional y fecha de creación. El
-inicializador no crea perfil para el administrador: este se agrega explícitamente mediante
-`POST /api/barberos/admin`, que solo inserta en `barbero`. Cambiar `barbero.activo` no cambia
-`usuario.activo` ni revoca sus sesiones.
-
-`barbero_servicio` representa las asignaciones y pertenece al módulo `barbero`. El módulo consulta
-el catálogo a través de `ServicioService`, valida que los servicios estén activos y permite una
-lista vacía. Un perfil nuevo comienza sin servicios asignados; el administrador los configura en
-`/panel/barberos`.
-
-## Entidades pendientes
-
-El siguiente diagrama muestra entidades del SRS que aún no tienen migración ni implementación.
-No representa capacidades disponibles.
-
-```mermaid
-erDiagram
-    barbero ||--o{ bloqueo : "bloqueo futuro"
-    usuario ||--o{ cita : "cliente futuro"
-    barbero ||--o{ cita : "barbero futuro"
-    servicio ||--o{ cita : "servicio futuro"
-
     bloqueo {
         uuid id PK
         uuid barbero_id FK
+        timestamptz inicio
+        timestamptz fin
+        varchar motivo
+    }
+    configuracion {
+        varchar clave PK
+        varchar valor
     }
     cita {
         uuid id PK
         uuid cliente_id FK
         uuid barbero_id FK
         uuid servicio_id FK
+        timestamptz inicio
+        timestamptz fin
+        integer duracion_min
+        numeric precio "12,2"
+        varchar estado
+        varchar canal
+        timestamptz creada_en
     }
+    usuario ||--o{ sesion_refresco : sesiones
+    sesion_refresco o|--o| sesion_refresco : reemplaza
+    usuario ||--o| barbero : perfil
+    barbero ||--o{ barbero_servicio : ofrece
+    servicio ||--o{ barbero_servicio : asignado
+    barbero ||--o{ horario_atencion : atiende
+    barbero ||--o{ horario_excepcion : excepciones
+    barbero ||--o{ bloqueo : bloqueado
+    usuario ||--o{ cita : cliente
+    barbero ||--o{ cita : atiende
+    servicio ||--o{ cita : servicio
 ```
 
-La integración de las asignaciones con disponibilidad y la consulta de citas futuras está
-pendiente del módulo `cita`. El diseño propuesto usa un puerto propiedad de `barbero` e
-implementado por `cita`, para evitar dependencia circular. Detalle y estado de los criterios en la
-[matriz H-13](../seguimiento/trazabilidad-H-13.md) y en el
-[ADR-0002](../decisiones/ADR-0002-asignacion-barbero-servicio-y-consulta-citas.md).
+## Integridad y disponibilidad
 
-## Reglas confirmadas
+- `barbero_servicio` es la asignación entre perfiles y catálogo; tiene clave primaria compuesta,
+  FKs con `ON DELETE RESTRICT` e índice por `servicio_id`.
+- `horario_atencion` guarda una jornada por barbero y día ISO: 1=lunes y 7=domingo. La semana
+  ordinaria no permite configurar domingo por RN-01. Los días sin fila están cerrados.
+- `horario_excepcion` prevalece sobre el horario semanal de esa fecha: puede abrir un domingo,
+  cerrar un festivo o reemplazar jornada y almuerzo. Una excepción cerrada no contiene horas; una
+  abierta contiene una jornada válida y almuerzo opcional.
+- El esquema de horario usa `almuerzo_inicio` y `almuerzo_fin`, según V7 de `develop`.
+- `bloqueo` y `cita` representan intervalos semiabiertos `[inicio, fin)`.
+- V10 habilita `btree_gist` y excluye solapamientos por barbero mediante
+  `tstzrange(inicio, fin, '[)')`, solo donde `estado <> 'CANCELADA'`. Un índice parcial cubre
+  citas vigentes por barbero e inicio.
+- V9 inicializa parámetros RN-18: anticipación mínima de 24 horas, límite de cancelación de 2
+  horas, máximo de 7 días, intervalo de turnos de 40 minutos y margen entre citas de 0 minutos.
+- V11 carga corte normal (40 min), corte premium (90 min), mechas (180 min) y ondulación (180 min).
+  Los precios COP 1.00 están marcados como provisionales por P-05 y deben reemplazarse antes de
+  publicar el catálogo real.
+- La disponibilidad se calcula al consultar y no modifica ni reubica citas existentes.
 
-- `usuario.celular` es único y `usuario.contrasena_hash` almacena el hash, no la contraseña.
-- `usuario.rol` admite `CLIENTE`, `BARBERO` y `ADMINISTRADOR`.
-- `barbero.usuario_id` es único y su FK usa `ON DELETE RESTRICT`.
-- Las cuentas y perfiles de barberos se crean desde el flujo administrativo. El administrador ya
-  existente puede agregarse explícitamente como perfil sin cambiar su cuenta. Ningún perfil se
-  inserta mediante una migración ni por el inicializador.
-- `barbero_servicio` evita pares duplicados y restringe el borrado de los registros referenciados.
-- `horario_atencion` guarda una jornada continua por día y barbero y evita pares duplicados con una
-  clave única de barbero y día; los días sin fila están cerrados. `dia_semana` usa ISO 1–7 y el
-  domingo no se configura en la semana (RN-01).
-- `horario_excepcion` sobrescribe una fecha concreta y evita duplicados con una clave única de
-  barbero y fecha: puede abrir un domingo, cerrar un festivo o cambiar el horario de ese día. Una
-  fecha cerrada no lleva horas; una abierta respeta la jornada de 10:00 a 19:00 y el almuerzo
-  dentro (RN-01 y RN-02).
-- El DTO público de barbero solo lista perfiles activos y no incluye nombre ni celular de la
-  cuenta. El DTO administrativo incluye esos campos y `servicioIds`, y está restringido a
-  administradores.
+## Perfiles e identidades
 
-## Conteo y SRS
+`barbero` es un perfil separado de la identidad. El nombre, celular y credenciales permanecen en
+`usuario`; el perfil guarda presentación pública, estado profesional y fecha de creación. La cuenta
+del administrador puede agregarse explícitamente como perfil sin cambiar su identidad. Cambiar
+`barbero.activo` no modifica `usuario.activo` ni revoca sus sesiones.
 
-El esquema actualmente implementado corresponde a V1–V8; las tablas restantes descritas por el SRS
-se mantienen como trabajo pendiente hasta que existan los módulos respectivos. El detalle de
-RF-10 en el SRS aclara que el perfil del administrador es explícito y opcional.
+Las cuentas y perfiles se crean desde el flujo administrativo. El DTO público de barberos no expone
+el nombre ni el celular de la cuenta. El rol real es `ADMINISTRADOR`; la diferencia con `ADMIN` del
+SRS y el frontend se registra en el [ADR-0004](../decisiones/ADR-0004-calculo-de-disponibilidad.md).
+
+## Referencias
+
+- [SRS](../srs/SRS-OalBarber.md)
+- [ADR-0001: UUID en identidades y perfiles](../decisiones/ADR-0001-uuid-en-identidades.md)
+- [ADR-0002: asignación barbero-servicio y consulta de citas](../decisiones/ADR-0002-asignacion-barbero-servicio-y-consulta-citas.md)
+- [ADR-0004: cálculo de disponibilidad](../decisiones/ADR-0004-calculo-de-disponibilidad.md)
