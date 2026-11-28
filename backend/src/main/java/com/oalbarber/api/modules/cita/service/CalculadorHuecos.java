@@ -4,7 +4,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -15,7 +14,7 @@ import java.util.UUID;
 
 import com.oalbarber.api.modules.cita.dto.IntervaloOcupadoResponse;
 import com.oalbarber.api.modules.horario.dto.BloqueoResponse;
-import com.oalbarber.api.modules.horario.dto.HorarioAtencionResponse;
+import com.oalbarber.api.modules.horario.dto.HorarioDiaResponse;
 import com.oalbarber.api.modules.horario.dto.ParametrosDisponibilidadResponse;
 
 /**
@@ -44,7 +43,7 @@ public final class CalculadorHuecos {
     public List<IntervaloDisponible> calcular(
             LocalDate fecha,
             UUID barberoId,
-            HorarioAtencionResponse horario,
+            HorarioDiaResponse horario,
             Collection<BloqueoResponse> bloqueos,
             Collection<IntervaloOcupadoResponse> citas,
             int duracionServicioMin,
@@ -61,10 +60,10 @@ public final class CalculadorHuecos {
         Instant finJornada = fecha.atTime(horario.horaFin()).atZone(ZONA_NEGOCIO).toInstant();
         List<Intervalo> ocupados = new ArrayList<>();
 
-        if (horario.inicioAlmuerzo() != null && horario.finAlmuerzo() != null) {
+        if (horario.almuerzoInicio() != null && horario.almuerzoFin() != null) {
             agregarSiCruza(ocupados,
-                    fecha.atTime(horario.inicioAlmuerzo()).atZone(ZONA_NEGOCIO).toInstant(),
-                    fecha.atTime(horario.finAlmuerzo()).atZone(ZONA_NEGOCIO).toInstant(),
+                    fecha.atTime(horario.almuerzoInicio()).atZone(ZONA_NEGOCIO).toInstant(),
+                    fecha.atTime(horario.almuerzoFin()).atZone(ZONA_NEGOCIO).toInstant(),
                     inicioJornada, finJornada);
         }
         if (bloqueos != null) {

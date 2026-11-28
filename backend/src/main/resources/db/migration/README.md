@@ -12,9 +12,9 @@ Carpeta de migraciones versionadas de PostgreSQL. El esquema de la base **solo**
 - Migraciones repetibles con `R__<descripcion>.sql` solo para datos que deban recalcularse.
 - La extensión `btree_gist` y la restricción de exclusión de la tabla `cita` (RNF-06), que impide
   solapar citas del mismo barbero incluso con reservas simultáneas.
-- Los parámetros de agenda de RN-18 se inicializan en V7. Los perfiles de barbero se crean desde
+- Los parámetros de agenda de RN-18 se inicializan en V9. Los perfiles de barbero se crean desde
   el flujo administrativo; no se insertan cuentas ni perfiles ficticios mediante migración.
-- V9 crea los cuatro servicios del catálogo. Sus precios de COP 1.00 son marcadores técnicos
+- V11 crea los cuatro servicios del catálogo. Sus precios de COP 1.00 son marcadores técnicos
   provisionales por P-05, identificados en el comentario de la columna y en los datos iniciales;
   deben reemplazarse por los precios confirmados antes de publicar el catálogo en producción.
 - Columnas de fecha con zona (`timestamptz`) y nombres de tabla/columna en snake_case.

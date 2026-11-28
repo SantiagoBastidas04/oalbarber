@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { formatearFecha, formatearFechaHora, formatearHora } from './fechas'
+import {
+  formatearFecha,
+  formatearFechaHora,
+  formatearFechaLocal,
+  formatearHora,
+} from './fechas'
 
 describe('fechas', () => {
   it('formatea la fecha en la zona de Bogotá', () => {
@@ -18,5 +23,12 @@ describe('fechas', () => {
     const texto = formatearFechaHora('2026-11-10T15:00:00Z')
     expect(texto).toContain('10 de noviembre')
     expect(texto).toContain('10:00')
+  })
+
+  it('formatea una fecha sin hora sin correr el día', () => {
+    const texto = formatearFechaLocal('2026-12-06')
+    expect(texto).toContain('6')
+    expect(texto).toContain('diciembre')
+    expect(texto).toContain('2026')
   })
 })

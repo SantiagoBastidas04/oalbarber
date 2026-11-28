@@ -33,12 +33,15 @@ Horario de atención por barbero, almuerzo, bloqueos de franjas o fechas complet
 ## Detalle de este módulo
 
 - `HorarioAtencion` → tabla `horario_atencion`: `id`, `barberoId`, `diaSemana`, `horaInicio`,
-  `horaFin`, `inicioAlmuerzo`, `finAlmuerzo`. No existe fila para el domingo.
+  `horaFin`, `almuerzoInicio`, `almuerzoFin`. Los días siguen ISO 1 (lunes) a 7 (domingo); un
+  domingo está abierto si existe una fila o una excepción abierta para esa fecha.
 - `Bloqueo` → tabla `bloqueo`: `id`, `barberoId`, `inicio`, `fin` (`timestamptz`) y `motivo`.
   Una fecha completa se representa con un rango que cubre el día.
 - `Configuracion` → tabla `configuracion`: `clave`, `valor`. Agrupa anticipación mínima, límite de
   cancelación, máximo de días, intervalo entre turnos y margen entre citas.
-- El almuerzo es el único descanso y se modela dentro de `HorarioAtencion`.
+- La excepción de una fecha prevalece sobre el horario semanal, incluso para marcar un festivo
+  cerrado o sustituir jornada y almuerzo.
+- El almuerzo es el único descanso y se modela dentro de `HorarioAtencion` o `HorarioExcepcion`.
 - La disponibilidad no es una entidad: se calcula al consultar y no se guarda aquí.
 
 ## Referencias

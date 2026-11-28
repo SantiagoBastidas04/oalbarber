@@ -9,15 +9,26 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-/** Horario semanal de un barbero, incluidos los tiempos de almuerzo confirmados. */
+/**
+ * Jornada continua de atencion de un barbero para un dia de la semana.
+ *
+ * <p>Una fila por dia; los dias sin fila se consideran cerrados. {@code diaSemana}
+ * usa ISO 8601: 1 = lunes ... 7 = domingo. Las horas son de reloj local
+ * (America/Bogota) y el motor de disponibilidad las combina con la fecha.</p>
+ */
+@Builder
 @Entity
 @Table(name = "horario_atencion")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class HorarioAtencion {
 
     @Id
@@ -36,9 +47,9 @@ public class HorarioAtencion {
     @Column(name = "hora_fin", nullable = false)
     private LocalTime horaFin;
 
-    @Column(name = "inicio_almuerzo")
-    private LocalTime inicioAlmuerzo;
+    @Column(name = "almuerzo_inicio")
+    private LocalTime almuerzoInicio;
 
-    @Column(name = "fin_almuerzo")
-    private LocalTime finAlmuerzo;
+    @Column(name = "almuerzo_fin")
+    private LocalTime almuerzoFin;
 }

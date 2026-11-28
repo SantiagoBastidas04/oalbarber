@@ -7,6 +7,7 @@ import java.util.Map;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -73,10 +74,28 @@ public class GlobalExceptionHandler {
         return detalle;
     }
 
+    /** Validación de negocio con detalle por fila (por ejemplo, un día del horario). */
+    @ExceptionHandler(ValidacionException.class)
+    public ProblemDetail validacionNegocio(ValidacionException ex, HttpServletRequest request) {
+        ProblemDetail detalle = problema(HttpStatus.BAD_REQUEST, "Revisa los datos enviados",
+                ex.getMessage(), ex.getCodigo(), request);
+        detalle.setProperty("errors", ex.getErrores());
+        return detalle;
+    }
+
+    /** Un JSON mal formado o una fecha/hora con formato inválido es un 400, no un 500. */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ProblemDetail cuerpoIlegible(HttpMessageNotReadableException ex,
+                                        HttpServletRequest request) {
+        return problema(HttpStatus.BAD_REQUEST, "Datos inválidos",
+                "El cuerpo de la petición no tiene el formato esperado.",
+                "CUERPO_INVALIDO", request);
+    }
+
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ProblemDetail parametroObligatorioAusente(
             MissingServletRequestParameterException ex, HttpServletRequest request) {
-        return errorParametro(ex.getParameterName(), "El campo es obligatorio.", request);
+        return errorParametro(ex.getParameterName(), "El campo es obligatorio.", "VALIDACION", request);
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
@@ -85,7 +104,7 @@ public class GlobalExceptionHandler {
         String mensaje = "fecha".equals(ex.getName())
                 ? "Debe tener formato AAAA-MM-DD."
                 : "Debe ser un identificador UUID válido.";
-        return errorParametro(ex.getName(), mensaje, request);
+        return errorParametro(ex.getName(), mensaje, "PARAMETRO_INVALIDO", request);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -123,9 +142,10 @@ public class GlobalExceptionHandler {
         return detalleProblema;
     }
 
-    private ProblemDetail errorParametro(String campo, String mensaje, HttpServletRequest request) {
+    private ProblemDetail errorParametro(String campo, String mensaje, String codigo,
+                                         HttpServletRequest request) {
         ProblemDetail detalle = problema(HttpStatus.BAD_REQUEST, "Parámetro inválido",
-                "Revisa los parámetros de la solicitud.", "VALIDACION", request);
+                "Revisa los parámetros de la solicitud.", codigo, request);
         detalle.setProperty("errors", Map.of(campo, mensaje));
         return detalle;
     }

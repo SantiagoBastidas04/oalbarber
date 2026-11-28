@@ -23,7 +23,8 @@ import com.oalbarber.api.modules.cita.dto.DisponibilidadResponse;
 import com.oalbarber.api.modules.cita.dto.IntervaloOcupadoResponse;
 import com.oalbarber.api.modules.cita.service.CalculadorHuecos.IntervaloDisponible;
 import com.oalbarber.api.modules.horario.dto.BloqueoResponse;
-import com.oalbarber.api.modules.horario.dto.HorarioAtencionResponse;
+import com.oalbarber.api.modules.horario.dto.HorarioDiaResponse;
+import com.oalbarber.api.modules.horario.dto.HorarioExcepcionResponse;
 import com.oalbarber.api.modules.horario.dto.ParametrosDisponibilidadResponse;
 import com.oalbarber.api.modules.horario.service.HorarioService;
 import com.oalbarber.api.modules.servicio.dto.ServicioResponse;
@@ -83,24 +84,30 @@ public class DisponibilidadService {
                         "El barbero indicado no existe, está inactivo o no ofrece el servicio seleccionado.");
             }
         }
-        if (candidatos.isEmpty() || fecha.getDayOfWeek().getValue() == 7) {
+        if (candidatos.isEmpty()) {
             return List.of();
         }
 
         Collection<UUID> idsBarberos = candidatos.stream().map(BarberoPublicoResponse::id).toList();
-        short diaSemana = (short) fecha.getDayOfWeek().getValue();
+        int diaSemana = fecha.getDayOfWeek().getValue();
         Instant inicioDia = fecha.atStartOfDay(ZONA_NEGOCIO).toInstant();
         Instant finDia = fecha.plusDays(1).atStartOfDay(ZONA_NEGOCIO).toInstant();
         ParametrosDisponibilidadResponse parametros = horarioService.obtenerParametrosDisponibilidad();
         Duration margen = Duration.ofMinutes(parametros.margenEntreCitasMinutos());
 
-        List<HorarioAtencionResponse> horarios = horarioService.listarHorarios(idsBarberos, diaSemana);
-        List<BloqueoResponse> bloqueos = horarioService.listarBloqueos(idsBarberos, inicioDia, finDia);
+        List<HorarioDiaResponse> horarios = horarioService.listarParaDisponibilidad(
+                idsBarberos, diaSemana);
+        List<HorarioExcepcionResponse> excepciones = horarioService
+                .listarExcepcionesParaDisponibilidad(idsBarberos, fecha);
+        List<BloqueoResponse> bloqueos = horarioService.listarBloqueosParaDisponibilidad(
+                idsBarberos, inicioDia, finDia);
         List<IntervaloOcupadoResponse> citas = citaService.listarOcupadas(
                 idsBarberos, inicioDia.minus(margen), finDia.plus(margen));
 
-        Map<UUID, HorarioAtencionResponse> horarioPorBarbero = new HashMap<>();
+        Map<UUID, HorarioDiaResponse> horarioPorBarbero = new HashMap<>();
         horarios.forEach(horario -> horarioPorBarbero.put(horario.barberoId(), horario));
+        Map<UUID, HorarioExcepcionResponse> excepcionPorBarbero = new HashMap<>();
+        excepciones.forEach(excepcion -> excepcionPorBarbero.put(excepcion.barberoId(), excepcion));
         Map<UUID, Long> citasPorBarbero = contarCitasDelDia(citas, inicioDia, finDia);
         List<BarberoPublicoResponse> priorizados = candidatos.stream()
                 .sorted(Comparator.comparingLong((BarberoPublicoResponse barbero) ->
@@ -110,14 +117,28 @@ public class DisponibilidadService {
 
         Map<Instant, DisponibilidadResponse> porInicio = new TreeMap<>();
         for (BarberoPublicoResponse barbero : priorizados) {
+            HorarioExcepcionResponse excepcion = excepcionPorBarbero.get(barbero.id());
+            HorarioDiaResponse horario = excepcion == null
+                    ? horarioPorBarbero.get(barbero.id())
+                    : horarioDeExcepcion(excepcion, diaSemana);
+            if (excepcion != null && excepcion.cerrado()) {
+                continue;
+            }
             List<IntervaloDisponible> turnos = calculadorHuecos.calcular(fecha, barbero.id(),
-                    horarioPorBarbero.get(barbero.id()), bloqueos, citas,
+                    horario, bloqueos, citas,
                     servicio.getDuracionMin(), parametros, reloj);
             for (IntervaloDisponible turno : turnos) {
                 porInicio.putIfAbsent(turno.inicio(), aRespuesta(turno));
             }
         }
         return List.copyOf(porInicio.values());
+    }
+
+    private static HorarioDiaResponse horarioDeExcepcion(HorarioExcepcionResponse excepcion,
+                                                          int diaSemana) {
+        return new HorarioDiaResponse(excepcion.id(), excepcion.barberoId(), diaSemana,
+                excepcion.horaInicio(), excepcion.horaFin(), excepcion.almuerzoInicio(),
+                excepcion.almuerzoFin());
     }
 
     private static Map<UUID, Long> contarCitasDelDia(List<IntervaloOcupadoResponse> citas,

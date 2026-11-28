@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import com.oalbarber.api.modules.cita.dto.IntervaloOcupadoResponse;
 import com.oalbarber.api.modules.cita.service.CalculadorHuecos.IntervaloDisponible;
 import com.oalbarber.api.modules.horario.dto.BloqueoResponse;
-import com.oalbarber.api.modules.horario.dto.HorarioAtencionResponse;
+import com.oalbarber.api.modules.horario.dto.HorarioDiaResponse;
 import com.oalbarber.api.modules.horario.dto.ParametrosDisponibilidadResponse;
 
 class CalculadorHuecosTest {
@@ -61,16 +61,16 @@ class CalculadorHuecosTest {
     @DisplayName("aplica el límite mínimo de 24 horas y el máximo exacto de siete días (RN-08)")
     void filtraPorAnticipacionMinimaYMaxima() {
         Clock reloj = Clock.fixed(FECHA.atTime(10, 0).atZone(ZONA).toInstant(), ZONA);
-        HorarioAtencionResponse jornadaManana = horario(10, 19, null, null);
+        HorarioDiaResponse jornadaManana = horario(10, 19, null, null);
         List<IntervaloDisponible> desdeHoy = calcular(jornadaManana, List.of(), List.of(),
                 40, PARAMETROS, reloj);
         assertThat(desdeHoy).noneMatch(turno -> turno.inicio()
                 .equals(instant("2030-01-07T10:00:00-05:00")));
 
         LocalDate ultimoDia = FECHA.plusDays(7);
-        HorarioAtencionResponse jornadaUltimoDia = new HorarioAtencionResponse(
-                BARBERO, (short) ultimoDia.getDayOfWeek().getValue(), LocalTime.of(10, 0),
-                LocalTime.of(19, 0), null, null);
+        HorarioDiaResponse jornadaUltimoDia = new HorarioDiaResponse(
+                UUID.randomUUID(), BARBERO, ultimoDia.getDayOfWeek().getValue(),
+                LocalTime.of(10, 0), LocalTime.of(19, 0), null, null);
         Clock relojLimite = Clock.fixed(FECHA.atTime(10, 0).atZone(ZONA).toInstant(), ZONA);
         List<IntervaloDisponible> enLimite = calculador.calcular(ultimoDia, BARBERO,
                 jornadaUltimoDia, List.of(), List.of(), 40, PARAMETROS, relojLimite);
@@ -115,7 +115,7 @@ class CalculadorHuecosTest {
     @Test
     @DisplayName("una cita parte el hueco en dos y las canceladas no se pasan como ocupación (CA-05)")
     void citaParteHuecoYAlCancelarlaSeLibera() {
-        HorarioAtencionResponse horario = horario(10, 19, null, null);
+        HorarioDiaResponse horario = horario(10, 19, null, null);
         List<IntervaloDisponible> ocupado = calcular(horario, List.of(),
                 List.of(cita("2030-01-07T13:00:00-05:00", "2030-01-07T14:00:00-05:00")),
                 40, PARAMETROS, RELOJ);
@@ -136,6 +136,21 @@ class CalculadorHuecosTest {
         assertThat(calcular(null, List.of(), List.of(), 40, PARAMETROS, RELOJ)).isEmpty();
         assertThat(calculador.calcular(domingo, BARBERO, null, List.of(), List.of(),
                 40, PARAMETROS, RELOJ)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("acepta un horario existente para domingo (día ISO 7)")
+    void domingoConHorarioExistentePuedeOfrecerTurnos() {
+        LocalDate domingo = FECHA.plusDays(6);
+        HorarioDiaResponse horarioDomingo = new HorarioDiaResponse(UUID.randomUUID(), BARBERO, 7,
+                LocalTime.of(10, 0), LocalTime.of(19, 0), null, null);
+
+        List<IntervaloDisponible> turnos = calculador.calcular(domingo, BARBERO,
+                horarioDomingo, List.of(), List.of(), 40, PARAMETROS, RELOJ);
+
+        assertThat(turnos).isNotEmpty();
+        assertThat(turnos.getFirst().inicio())
+                .isEqualTo(instant("2030-01-13T10:00:00-05:00"));
     }
 
     @Test
@@ -164,7 +179,7 @@ class CalculadorHuecosTest {
     @Test
     @DisplayName("un turno de la mañana no mueve turnos ya posibles por la tarde (CA-08)")
     void calcularNoReubicaTurnosDeLaTarde() {
-        HorarioAtencionResponse horario = horario(10, 19, null, null);
+        HorarioDiaResponse horario = horario(10, 19, null, null);
         List<IntervaloDisponible> antes = calcular(horario, List.of(), List.of(),
                 40, PARAMETROS, RELOJ);
         List<IntervaloDisponible> despuesDeAgendarManana = calcular(horario, List.of(),
@@ -190,7 +205,7 @@ class CalculadorHuecosTest {
         assertThat(turnos).isNotEmpty();
     }
 
-    private List<IntervaloDisponible> calcular(HorarioAtencionResponse horario,
+    private List<IntervaloDisponible> calcular(HorarioDiaResponse horario,
                                                 List<BloqueoResponse> bloqueos,
                                                 List<IntervaloOcupadoResponse> citas,
                                                 int duracion,
@@ -200,10 +215,10 @@ class CalculadorHuecosTest {
                 duracion, parametros, reloj);
     }
 
-    private static HorarioAtencionResponse horario(int apertura, int cierre,
-                                                    LocalTime almuerzoInicio,
-                                                    LocalTime almuerzoFin) {
-        return new HorarioAtencionResponse(BARBERO, (short) 1,
+    private static HorarioDiaResponse horario(int apertura, int cierre,
+                                               LocalTime almuerzoInicio,
+                                               LocalTime almuerzoFin) {
+        return new HorarioDiaResponse(UUID.randomUUID(), BARBERO, 1,
                 LocalTime.of(apertura, 0), LocalTime.of(cierre, 0), almuerzoInicio, almuerzoFin);
     }
 

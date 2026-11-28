@@ -100,6 +100,70 @@ class DisponibilidadIntegrationTest {
     }
 
     @Test
+    @DisplayName("una excepción abierta permite un domingo sin horario semanal")
+    void domingoAbiertoPorExcepcion() throws Exception {
+        LocalDate domingo = proximoDomingo();
+        insertarExcepcion(BARBERO_UNO, domingo, false, LocalTime.of(11, 0),
+                LocalTime.of(16, 0), null, null);
+
+        mockMvc.perform(get("/api/disponibilidad")
+                        .param("servicioId", SERVICIO_ID.toString())
+                        .param("fecha", domingo.toString())
+                        .param("barberoId", BARBERO_UNO.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].inicio").value(domingo + "T11:00:00-05:00"));
+    }
+
+    @Test
+    @DisplayName("una excepción cerrada prevalece sobre el horario semanal")
+    void festivoCerradoPrevaleceSobreSemana() throws Exception {
+        insertarExcepcion(BARBERO_UNO, fecha, true, null, null, null, null);
+
+        mockMvc.perform(get("/api/disponibilidad")
+                        .param("servicioId", SERVICIO_ID.toString())
+                        .param("fecha", fecha.toString())
+                        .param("barberoId", BARBERO_UNO.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    @DisplayName("la excepción reemplaza la jornada semanal por horas distintas")
+    void horarioEspecialReemplazaJornadaSemanal() throws Exception {
+        insertarExcepcion(BARBERO_UNO, fecha, false, LocalTime.of(12, 0),
+                LocalTime.of(17, 0), null, null);
+
+        MvcResult respuesta = mockMvc.perform(get("/api/disponibilidad")
+                        .param("servicioId", SERVICIO_ID.toString())
+                        .param("fecha", fecha.toString())
+                        .param("barberoId", BARBERO_UNO.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].inicio").value(fecha + "T12:00:00-05:00"))
+                .andReturn();
+
+        List<String> inicios = JsonPath.read(respuesta.getResponse().getContentAsString(), "$[*].inicio");
+        assertThat(inicios).noneMatch(inicio -> inicio.endsWith("T10:00:00-05:00"));
+    }
+
+    @Test
+    @DisplayName("la excepción reemplaza también el almuerzo semanal")
+    void almuerzoEspecialSeRestaDeLaJornada() throws Exception {
+        insertarExcepcion(BARBERO_UNO, fecha, false, LocalTime.of(10, 0),
+                LocalTime.of(19, 0), LocalTime.of(12, 0), LocalTime.of(13, 0));
+
+        MvcResult respuesta = mockMvc.perform(get("/api/disponibilidad")
+                        .param("servicioId", SERVICIO_ID.toString())
+                        .param("fecha", fecha.toString())
+                        .param("barberoId", BARBERO_UNO.toString()))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        List<String> inicios = JsonPath.read(respuesta.getResponse().getContentAsString(), "$[*].inicio");
+        assertThat(inicios).noneMatch(inicio -> inicio.endsWith("T12:00:00-05:00"));
+        assertThat(inicios).anyMatch(inicio -> inicio.endsWith("T13:00:00-05:00"));
+    }
+
+    @Test
     @DisplayName("barbero que no ofrece el servicio o está inactivo recibe 409")
     void barberoNoElegibleRespondeConflicto() throws Exception {
         mockMvc.perform(get("/api/disponibilidad")
@@ -168,6 +232,14 @@ class DisponibilidadIntegrationTest {
         return candidata;
     }
 
+    private LocalDate proximoDomingo() {
+        LocalDate candidata = LocalDate.now(clock).plusDays(1);
+        while (candidata.getDayOfWeek().getValue() != 7) {
+            candidata = candidata.plusDays(1);
+        }
+        return candidata;
+    }
+
     private void insertarUsuario(UUID id, String celular, String rol) {
         jdbcTemplate.update("""
                 INSERT INTO usuario (id, nombre, celular, contrasena_hash, rol)
@@ -197,6 +269,17 @@ class DisponibilidadIntegrationTest {
                 INSERT INTO horario_atencion (id, barbero_id, dia_semana, hora_inicio, hora_fin)
                 VALUES (?, ?, ?, '10:00', '19:00')
                 """, UUID.randomUUID(), barberoId, dia.getDayOfWeek().getValue());
+    }
+
+    private void insertarExcepcion(UUID barberoId, LocalDate fecha, boolean cerrado,
+                                   LocalTime horaInicio, LocalTime horaFin,
+                                   LocalTime almuerzoInicio, LocalTime almuerzoFin) {
+        jdbcTemplate.update("""
+                INSERT INTO horario_excepcion (id, barbero_id, fecha, cerrado, hora_inicio,
+                                               hora_fin, almuerzo_inicio, almuerzo_fin)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, UUID.randomUUID(), barberoId, fecha, cerrado, horaInicio, horaFin,
+                almuerzoInicio, almuerzoFin);
     }
 
     private void insertarCita(UUID barberoId, java.time.LocalDateTime inicioLocal,

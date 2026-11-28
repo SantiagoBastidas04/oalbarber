@@ -4,7 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -30,7 +33,8 @@ import com.oalbarber.api.modules.barbero.service.BarberoService;
 import com.oalbarber.api.modules.cita.dto.DisponibilidadResponse;
 import com.oalbarber.api.modules.cita.dto.IntervaloOcupadoResponse;
 import com.oalbarber.api.modules.horario.dto.BloqueoResponse;
-import com.oalbarber.api.modules.horario.dto.HorarioAtencionResponse;
+import com.oalbarber.api.modules.horario.dto.HorarioDiaResponse;
+import com.oalbarber.api.modules.horario.dto.HorarioExcepcionResponse;
 import com.oalbarber.api.modules.horario.dto.ParametrosDisponibilidadResponse;
 import com.oalbarber.api.modules.horario.service.HorarioService;
 import com.oalbarber.api.modules.servicio.dto.ServicioResponse;
@@ -116,7 +120,7 @@ class DisponibilidadServiceTest {
                 SERVICIO_ID, FECHA, BARBERO_AJENO_ID))
                 .isInstanceOf(ReglaNegocioException.class)
                 .hasMessageContaining("no existe, está inactivo o no ofrece el servicio");
-        verify(horarioService, never()).listarHorarios(anyCollection(), any(Short.class));
+        verify(horarioService, never()).listarParaDisponibilidad(anyCollection(), anyInt());
     }
 
     @Test
@@ -125,7 +129,64 @@ class DisponibilidadServiceTest {
         when(barberoService.listarActivosQueOfrecenServicio(SERVICIO_ID)).thenReturn(List.of());
 
         assertThat(disponibilidadService.calcularDisponibilidad(SERVICIO_ID, FECHA, null)).isEmpty();
-        verify(horarioService, never()).listarHorarios(anyCollection(), any(Short.class));
+        verify(horarioService, never()).listarParaDisponibilidad(anyCollection(), anyInt());
+    }
+
+    @Test
+    @DisplayName("una excepción abierta permite un domingo aunque la semana ordinaria no tenga fila")
+    void excepcionAbreDomingo() {
+        LocalDate domingo = FECHA.plusDays(6);
+        when(barberoService.listarActivosQueOfrecenServicio(SERVICIO_ID))
+                .thenReturn(List.of(barbero(BARBERO_MENOR_ID)));
+        when(horarioService.obtenerParametrosDisponibilidad()).thenReturn(PARAMETROS);
+        when(horarioService.listarParaDisponibilidad(anyCollection(), eq(7))).thenReturn(List.of());
+        when(horarioService.listarExcepcionesParaDisponibilidad(anyCollection(), eq(domingo)))
+                .thenReturn(List.of(excepcionAbierta(BARBERO_MENOR_ID, domingo,
+                        LocalTime.of(11, 0), LocalTime.of(16, 0), null, null)));
+        when(horarioService.listarBloqueosParaDisponibilidad(
+                anyCollection(), any(Instant.class), any(Instant.class))).thenReturn(List.of());
+        when(citaService.listarOcupadas(anyCollection(), any(Instant.class), any(Instant.class)))
+                .thenReturn(List.of());
+        Clock relojDomingo = Clock.fixed(domingo.minusDays(1).atTime(11, 0)
+                .atZone(ZONA).toInstant(), ZONA);
+        disponibilidadService = new DisponibilidadService(
+                servicioService, barberoService, horarioService, citaService, relojDomingo);
+
+        List<DisponibilidadResponse> turnos = disponibilidadService
+                .calcularDisponibilidad(SERVICIO_ID, domingo, null);
+
+        assertThat(turnos).isNotEmpty();
+        assertThat(turnos.getFirst().inicio().toString()).isEqualTo("2030-01-13T11:00-05:00");
+    }
+
+    @Test
+    @DisplayName("una excepción cerrada prevalece sobre el horario semanal")
+    void excepcionCerradaPrevaleceSobreSemana() {
+        configurarAgenda(List.of());
+        when(horarioService.listarExcepcionesParaDisponibilidad(anyCollection(), eq(FECHA)))
+                .thenReturn(List.of(excepcionCerrada(BARBERO_MAYOR_ID, FECHA)));
+
+        List<DisponibilidadResponse> turnos = disponibilidadService
+                .calcularDisponibilidad(SERVICIO_ID, FECHA, BARBERO_MAYOR_ID);
+
+        assertThat(turnos).isEmpty();
+    }
+
+    @Test
+    @DisplayName("la excepción reemplaza el horario y el almuerzo de la fecha")
+    void excepcionReemplazaHorarioYAlmuerzo() {
+        configurarAgenda(List.of());
+        when(horarioService.listarExcepcionesParaDisponibilidad(anyCollection(), eq(FECHA)))
+                .thenReturn(List.of(excepcionAbierta(BARBERO_MAYOR_ID, FECHA,
+                        LocalTime.of(12, 0), LocalTime.of(17, 0),
+                        LocalTime.of(13, 0), LocalTime.of(14, 0))));
+
+        List<DisponibilidadResponse> turnos = disponibilidadService
+                .calcularDisponibilidad(SERVICIO_ID, FECHA, BARBERO_MAYOR_ID);
+
+        assertThat(turnos).extracting(turno -> turno.inicio().toLocalTime())
+                .contains(LocalTime.of(12, 0), LocalTime.of(14, 0))
+                .doesNotContain(LocalTime.of(10, 0), LocalTime.of(13, 0), LocalTime.of(13, 40));
     }
 
     private static BarberoPublicoResponse barbero(UUID id) {
@@ -136,17 +197,33 @@ class DisponibilidadServiceTest {
         when(barberoService.listarActivosQueOfrecenServicio(SERVICIO_ID))
                 .thenReturn(List.of(barbero(BARBERO_MAYOR_ID), barbero(BARBERO_MENOR_ID)));
         when(horarioService.obtenerParametrosDisponibilidad()).thenReturn(PARAMETROS);
-        when(horarioService.listarHorarios(anyCollection(), any(Short.class)))
+        when(horarioService.listarParaDisponibilidad(anyCollection(), anyInt()))
                 .thenReturn(List.of(horario(BARBERO_MAYOR_ID), horario(BARBERO_MENOR_ID)));
-        when(horarioService.listarBloqueos(anyCollection(), any(Instant.class), any(Instant.class)))
+        lenient().when(horarioService.listarExcepcionesParaDisponibilidad(
+                anyCollection(), any(LocalDate.class))).thenReturn(List.of());
+        when(horarioService.listarBloqueosParaDisponibilidad(
+                anyCollection(), any(Instant.class), any(Instant.class)))
                 .thenReturn(List.<BloqueoResponse>of());
         when(citaService.listarOcupadas(anyCollection(), any(Instant.class), any(Instant.class)))
                 .thenReturn(citas);
     }
 
-    private static HorarioAtencionResponse horario(UUID id) {
-        return new HorarioAtencionResponse(id, (short) 1, LocalTime.of(10, 0),
+    private static HorarioDiaResponse horario(UUID id) {
+        return new HorarioDiaResponse(UUID.randomUUID(), id, 1, LocalTime.of(10, 0),
                 LocalTime.of(19, 0), null, null);
+    }
+
+    private static HorarioExcepcionResponse excepcionAbierta(UUID barberoId, LocalDate fecha,
+                                                              LocalTime inicio, LocalTime fin,
+                                                              LocalTime almuerzoInicio,
+                                                              LocalTime almuerzoFin) {
+        return new HorarioExcepcionResponse(UUID.randomUUID(), barberoId, fecha, false,
+                inicio, fin, almuerzoInicio, almuerzoFin);
+    }
+
+    private static HorarioExcepcionResponse excepcionCerrada(UUID barberoId, LocalDate fecha) {
+        return new HorarioExcepcionResponse(UUID.randomUUID(), barberoId, fecha, true,
+                null, null, null, null);
     }
 
     private static Instant instant(String fechaHora) {
